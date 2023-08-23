@@ -6,4 +6,6 @@ youtube.com###details > h3.style-scope.ytd-rich-grid-slim-media:first-child
 youtube.com###rich-shelf-header
 youtube.com###visible-video-container
 youtube.com###metadata-container
+youtube.com###contents > ytd-reel-shelf-renderer.style-scope.ytd-item-section-renderer
+youtube.com###content > ytd-rich-shelf-renderer.style-scope.ytd-rich-section-renderer
 ```
