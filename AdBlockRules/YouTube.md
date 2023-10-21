@@ -1,4 +1,8 @@
 Disables shorts, irrelevant banners, and other distracting things
+
+**No longer worky on da tubes :(***
+
+
 ```
 youtube.com###video-preview > ytd-video-preview.style-scope.ytd-app
 youtube.com###thumbnail > yt-image.style-scope.ytd-thumbnail:first-child > img.yt-core-image--fill-parent-height.yt-core-image--fill-parent-width.yt-core-image.yt-core-image--content-mode-scale-aspect-fit.yt-core-image--loaded
