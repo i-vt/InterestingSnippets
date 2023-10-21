@@ -1,6 +1,6 @@
 Disables shorts, irrelevant banners, and other distracting things
 
-** No longer worky on da tubes :(, only works with premium **
+**No longer worky on da tubes :(, only works with premium**
 
 
 ```
