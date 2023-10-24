@@ -18,7 +18,7 @@ with open(ROOTFOLDER, "r") as file:
 for folder in impacted_folders:
   try:
     if folder == []: continue # skip empty lines (usually at least 1 at the end of the file)
-    folder_path = os.path.basename(folder)  # Replace with the path to your folder
+    folder_path = os.path.dirname(folder)  # Replace with the path to your folder
     
     # Get a list of all files in the folder
     files = os.listdir(folder_path)
