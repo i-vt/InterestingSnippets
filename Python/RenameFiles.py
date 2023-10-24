@@ -27,7 +27,7 @@ for folder in impacted_folders:
     for i, file_name in enumerate(files):
       
       # If int is sorted & has a no padding 0's it gets sorted in a funky way
-      new_name = os.path.join(folder_path, str(file_name[:len(EXTENSION)] + 1) + EXTENSION)
+      new_name = os.path.join(folder_path, str(int(file_name[:-1*len(EXTENSION)]) + 1) + EXTENSION)
       old_name = os.path.join(folder_path, file_name)
       
       # Rename the file
