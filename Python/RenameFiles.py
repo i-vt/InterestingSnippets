@@ -23,13 +23,11 @@ for folder in impacted_folders:
     # Get a list of all files in the folder
     files = os.listdir(folder_path)
     
-    # Sort the files by their current names
-    # Reversed to avoid overlapping otherwise 0.txt -> 1.txt; 1.txt -> 2.txt: duplicating 0.txt throughout the whole set
-    files.sort(reverse=True)
-    
     # Loop through the files and rename them to start with "1.txt"
     for i, file_name in enumerate(files):
-      new_name = os.path.join(folder_path, f"{i+1}{EXTENSION}")
+      
+      # If int is sorted & has a no padding 0's it gets sorted in a funky way
+      new_name = os.path.join(folder_path, str(file_name[:len(EXTENSION)] + 1) + EXTENSION)
       old_name = os.path.join(folder_path, file_name)
       
       # Rename the file
