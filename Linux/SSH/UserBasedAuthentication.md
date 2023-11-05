@@ -1,4 +1,5 @@
-Tested on ubuntu
+# Configuring SSH on Linux
+Tested on ubuntu 22.04.03 LTS
 
 ### Check for updates
 ```
@@ -31,8 +32,10 @@ sudo adduser your_username
 sudo passwd your_username
 ```
 
-modify /etc/ssh/sshd_config
-```AllowUsers your_username```
+modify /etc/ssh/sshd_config to add users (if multiple separate by space)
+```
+AllowUsers your_username
+```
 
 ### Manage UFW 
 
@@ -53,5 +56,12 @@ sudo ufw allow from your_specific_ip to any port 22
 sudo ufw deny 22/tcp
 ```
 
-
+### Check on it:
+Try to SSH into the box:
+```
+ssh your_username@10.1.1.1
+```
+If any issues arise restart the service again:
+```
 sudo service ssh restart
+```
