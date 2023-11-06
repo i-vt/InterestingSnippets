@@ -15,9 +15,8 @@ Start the PostgreSQL CLI
 sudo -u postgres psql
 ```
 
-
+Configure a basic user:
 ```
-CREATE USER super_username WITH PASSWORD 'password';
-ALTER USER super_username WITH SUPERUSER;
-
+CREATE USER superuser WITH PASSWORD 'password';
+ALTER USER superuser WITH SUPERUSER;
 ```
