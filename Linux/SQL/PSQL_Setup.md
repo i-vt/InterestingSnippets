@@ -25,6 +25,7 @@ Configure a basic user:
 ```
 CREATE USER superuser WITH PASSWORD 'password';
 ALTER USER superuser WITH SUPERUSER;
+\q
 ```
 
 
