@@ -4,6 +4,8 @@
 
 # NOT FULLY TESTED, PLEASE BE CAREFUL USING THIS. THANK YOU.
 
+# Run as scheduled task every X minutes from system privileges
+
 
 
 
@@ -42,13 +44,13 @@ if ( ($lastAccessed -gt $comparisonDate) -OR ($lastModified -gt $comparisonDate)
         # Remove the primary boot entry
         bcdedit /delete {current} /f
     
-        # Force a reboot
-        Restart-Computer -Force
     }
     Catch {
         Write-Error "An error occurred: $_"
     }
 
+    # Force a reboot
+    Restart-Computer -Force
 }
 
 
