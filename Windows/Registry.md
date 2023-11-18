@@ -17,3 +17,7 @@ In order for the application to stay running on the computer upon every reboot (
 - Run every time any user logs in: ```HKLM\Software\Microsoft\Windows\CurrentVersion\Run```
 - Run the next time current user logs in: ```HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce```
 - Run the next time any user logs in: ```HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce```
+
+### Debugging & Optimization
+
+- Specifies DLLs to be loaded into each process that calls User32.dll (DLL injection): ```HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows\AppInit_DLLs```
