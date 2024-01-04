@@ -24,3 +24,9 @@ node --version
 npm --version
 sudo npm install npm@latest -g
 ```
+
+## Create a project
+```
+mkdir projectname; cd projectname
+npm init
+```
