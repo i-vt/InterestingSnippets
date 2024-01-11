@@ -1,4 +1,3 @@
-//Ripped from a 粉面弹子CVV鱼站管理 / "Fenmiandanzi CVV fish station management" phishing template
 new Vue({
     "el": "#appAll"
     , "data"() {
