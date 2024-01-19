@@ -1,3 +1,7 @@
+//using iTextSharp.text.pdf;
+//using iTextSharp.text.pdf.parser;
+//using System.IO;
+
 string inputPdf = "input.pdf"; 
 
 using (PdfReader reader = new PdfReader(inputPdf))
