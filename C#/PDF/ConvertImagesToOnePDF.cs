@@ -3,35 +3,49 @@ using iTextSharp.text.pdf;
 using System;
 using System.IO;
 
-
-string[] imageFiles = Directory.GetFiles("image_directory_path");
-string outputPdf = "output.pdf";
-
-using (FileStream fs = new FileStream(outputPdf, FileMode.Create))
+private void IsImageFile(string directoryPathWithImages, string pdfOutputPath, bool bolScalePageToImageSize)
 {
-    using (Document document = new Document())
+    string[] imageFiles = Directory.GetFiles("image_directory_path");
+    string outputPdf = "output.pdf";
+    
+    using (FileStream fs = new FileStream(outputPdf, FileMode.Create))
     {
-        using (PdfWriter writer = PdfWriter.GetInstance(document, fs))
+        using (Document document = new Document())
         {
-            document.Open();
-            
-            foreach (string imageFile in imageFiles)
+            using (PdfWriter writer = PdfWriter.GetInstance(document, fs))
             {
-                if (IsImageFile(imageFile))
+                document.Open();
+                
+                foreach (string imageFile in imageFiles)
                 {
-                    Image image = Image.GetInstance(imageFile);
-                    document.Add(image);
+                    if (IsImageFile(imageFile))
+                    {
+                        
+                        iTextSharp.text.Image image = iTextSharp.text.Image.GetInstance(imageFile);
+                        if (bolScalePageToImageSize)
+                        {
+                            float imageWidth = image.ScaledWidth;
+                            float imageHeight = image.ScaledHeight;
+                            document.SetPageSize(new iTextSharp.text.Rectangle(imageWidth, imageHeight)
+                        }
+                        else
+                        {
+                            image.ScaleToFit(document.PageSize.Width, document.PageSize.Height);
+                        }
+                        image.SetAbsolutePosition(0,0);
+                        document.NewPage();
+                        document.Add(image);
+                    }
                 }
+                
+                document.Close();
             }
-            
-            document.Close();
         }
     }
 }
-
-private static bool IsImageFile(string filePath)
+private bool IsImageFile(string filePath)
 {
     string[] imageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".bmp" }; 
-    string fileExtension = Path.GetExtension(filePath).ToLower();
+    string fileExtension = System.IO.Path.GetExtension(filePath).ToLower();
     return Array.Exists(imageExtensions, ext => ext == fileExtension);
 }
