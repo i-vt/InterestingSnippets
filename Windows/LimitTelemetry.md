@@ -9,6 +9,11 @@ tskill searchui
 
 ## Point telemetry domains to localhost
 **WARNING**: This will break some of the windows functionality.
+
+Save telemetry domains to a .txt file, then run the PS script: 
+```Get-Content -Path 'C:\Temp\TelemetryDomains.txt' | ForEach-Object { Add-Content -Path 'C:\Windows\System32\drivers\etc\hosts' -Value "127.0.0.1 `t$_" }```
+
+TelemetryDomains.txt:
 ```
 a-0001.a-msedge.net
 a-0002.a-msedge.net
