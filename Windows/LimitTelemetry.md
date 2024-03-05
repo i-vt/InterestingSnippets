@@ -4,14 +4,16 @@
 ```
 REG ADD HKCU\Software\Microsoft\Windows\CurrentVersion\Search /v BingSearchEnabled /t REG_DWORD /d 0
 REG ADD HKCU\Software\Microsoft\Windows\CurrentVersion\Search /v CortanaConsent /t REG_DWORD /d 0
-tskill searchui
+tskill searchui #command will probably fail, in that case just restart lol
 ```
 
 ## Point telemetry domains to localhost
 **WARNING**: This will break some of the windows functionality.
 
 Save telemetry domains to a .txt file, then run the PS script: 
-```Get-Content -Path 'C:\Temp\TelemetryDomains.txt' | ForEach-Object { Add-Content -Path 'C:\Windows\System32\drivers\etc\hosts' -Value "127.0.0.1 `t$_" }```
+```PowerShell
+Get-Content -Path 'C:\Temp\TelemetryDomains.txt' | ForEach-Object { Add-Content -Path 'C:\Windows\System32\drivers\etc\hosts' -Value "127.0.0.1 `t$_" }
+```
 
 TelemetryDomains.txt:
 ```
