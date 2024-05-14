@@ -47,6 +47,19 @@ def read_json(filepath: str) -> dict:
         print(f"An error occurred: {e}")
         return {}
 
+def get_all_keys(data, parent_key=''):
+    keys = []
+    if isinstance(data, dict):
+        for key, value in data.items():
+            full_key = f"{parent_key}.{key}" if parent_key else key
+            keys.append(full_key)
+            keys.extend(get_all_keys(value, full_key))
+    elif isinstance(data, list):
+        for index, item in enumerate(data):
+            full_key = f"{parent_key}[{index}]"
+            keys.extend(get_all_keys(item, full_key))
+    return keys
+
 # Other
 ## Accessing JSON: 
 data = read_json("/example/dir/file.json")
