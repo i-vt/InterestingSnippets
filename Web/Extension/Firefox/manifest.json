@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Auto Refresh Extension",
+  "version": "1.0",
+  "description": "Automatically refreshes the active tab every 5 minutes.",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "tabs",
+    "activeTab"
+  ],
+  "action": {
+    "default_title": "Start Auto Refresh"
+  }
+}
