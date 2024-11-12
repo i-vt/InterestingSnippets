@@ -6,6 +6,13 @@ PORT = 2020
 
 class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
+        # Downgrade HTTPS message if detected (note: not handled in pure http.server)
+        if self.headers.get('X-Forwarded-Proto') == 'https':
+            self.send_response(403)
+            self.end_headers()
+            self.wfile.write(b"HTTPS not supported, please use HTTP.")
+            return
+        
         form = cgi.FieldStorage(
             fp=self.rfile,
             headers=self.headers,
@@ -25,6 +32,13 @@ class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(b'No file uploaded!')
             
     def do_GET(self):
+        # Downgrade HTTPS message if detected (note: not handled in pure http.server)
+        if self.headers.get('X-Forwarded-Proto') == 'https':
+            self.send_response(403)
+            self.end_headers()
+            self.wfile.write(b"HTTPS not supported, please use HTTP.")
+            return
+
         if self.path == '/':
             self.path = 'index.html'
         return http.server.SimpleHTTPRequestHandler.do_GET(self)
