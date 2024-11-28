@@ -4,6 +4,9 @@ Could be further extended by installing plugins or moving onto nvim. This base c
 
 
 ```
+" Fix glitches with arrows & a few other quality of life things
+set nocompatible
+
 " Set line numbering
 set number
 
