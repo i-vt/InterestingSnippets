@@ -9,12 +9,23 @@ if [[ ! -f "$input_file" ]]; then
   exit 1
 fi
 
-# Read each subdomain from the input file
-while IFS= read -r subdomain; do
-  value1="$subdomain$host1"
+# Create or clear the log file
+> "$log_file"
+
+# Function to handle pinging
+ping_subdomain() {
+  local subdomain=$1
+  local value1="$subdomain$host1"
   if ping -c 1 "$value1" > /dev/null 2>&1; then
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $value1" >> "$log_file"
   fi
-done < "$input_file"
+}
+
+export -f ping_subdomain
+export host1
+export log_file
+
+# Use xargs to process in parallel
+cat "$input_file" | xargs -I {} -P 10 bash -c 'ping_subdomain "$@"' _ {}
 
 echo "Script completed. Check $log_file for successful pings."
