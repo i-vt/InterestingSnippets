@@ -29,4 +29,7 @@ set shortmess+=FA
 
 " Enable mouse
 set mouse=a
+
+" Fix backspace (new line deletion)
+set backspace=indent,eol,start
 ```
