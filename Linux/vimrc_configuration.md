@@ -10,13 +10,10 @@ set nocompatible
 " Set line numbering
 set number
 
-" Replace tab with 2x spaces
+" Replace tab with 4x spaces
 set expandtab
-set tabstop=2
-set shiftwidth=2
-
-" Syntax hilight
-syntax enable
+set tabstop=4
+set shiftwidth=4
 
 " Auto indent
 set autoindent
@@ -32,8 +29,4 @@ set shortmess+=FA
 
 " Enable mouse
 set mouse=a
-
-" Create backups (don't forget to mkdir -p  ~/.vim/swaps)
-set directory=~/.vim/swaps/
-set updatecount=100
 ```
