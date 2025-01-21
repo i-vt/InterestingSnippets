@@ -1,1 +1,1 @@
- clear; cat build.gradle; find ./src -type f -exec cat {} +; tree . > ../summary.txt
+clear; cat build.gradle > ../summary.txt; find ./src -type f -exec cat {} + >>../summary.txt; tree . >> ../summary.txt
