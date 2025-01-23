@@ -9,3 +9,7 @@ Restart your system: Sometimes, a simple restart can resolve issues with Snap ap
 
 Check for Errors: Run Firefox from the terminal to see if it produces any error messages that could provide clues about the problem. Open a terminal and run:
 ```snap run firefox```
+
+## GNOME
+Some snap apps might not reflect on the menu, you have to link it:
+`ln -s /var/lib/snapd/desktop/applications ~/.local/share/applications/snap`
