@@ -41,10 +41,16 @@ class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
         if self.path == '/':
             self.path = 'index.html'
+        elif self.path == '/curl-help':
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b'Use curl to upload files: curl -F "file=@<filename>" http://localhost:2020/')
+            return
         return http.server.SimpleHTTPRequestHandler.do_GET(self)
 
 Handler = SimpleHTTPRequestHandler
 
 with socketserver.TCPServer(("", PORT), Handler) as httpd:
-    print(f"Serving on port {PORT}")
+    print(f"Serving on port {PORT}. You can upload files using curl with the following command:")
+    print(f'curl -F "file=@path_to_your_file" http://localhost:{PORT}/')
     httpd.serve_forever()
