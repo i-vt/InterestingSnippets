@@ -3,12 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <title>File Upload</title>
+    <style>
+        #drop-area {
+            width: 300px;
+            height: 100px;
+            border: 2px dashed #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            margin: 10px;
+        }
+        #drop-area.highlight {
+            border-color: blue;
+        }
+        input[type="file"] {
+            display: none;
+        }
+    </style>
 </head>
 <body>
     <h2>File Upload</h2>
-    <form enctype="multipart/form-data" method="post" action="/">
-        <input type="file" name="file">
+    <form enctype="multipart/form-data" method="post" action="/" id="file-form">
+        <input type="file" name="file" id="fileElem">
+        <div id="drop-area">
+            <p>Drag and drop a file here, or click to select a file.</p>
+        </div>
         <button type="submit">Upload</button>
     </form>
+
+    <script>
+        let dropArea = document.getElementById('drop-area');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            dropArea.classList.add('highlight');
+        }
+
+        function unhighlight(e) {
+            dropArea.classList.remove('highlight');
+        }
+
+        dropArea.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            let dt = e.dataTransfer;
+            let files = dt.files;
+            handleFiles(files);
+        }
+
+        function handleFiles(files) {
+            document.getElementById('fileElem').files = files;
+            document.getElementById('file-form').submit();
+        }
+
+        dropArea.addEventListener('click', function() {
+            document.getElementById('fileElem').click();
+        });
+
+        document.getElementById('fileElem').addEventListener('change', function() {
+            document.getElementById('file-form').submit();
+        });
+    </script>
 </body>
 </html>
