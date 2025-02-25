@@ -1,3 +1,4 @@
+// g++ -o CheckExecutionPath CheckExecutionPath.cpp
 #include <iostream>
 #include <string>
 
