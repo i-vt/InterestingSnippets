@@ -11,7 +11,7 @@ run angristan_wireguard-installer.sh, OG source: [here](https://github.com/angri
 sudo apt install wireguard -y
 sudo apt install resolvconf -y
 ```
-Add this to the `~/.bashrc`: `export PATH=$PATH:/usr/sbin`
+Add this to the `~/.bashrc` file: `export PATH=$PATH:/usr/sbin`
 ```
 vi ~/bashrc
 source ~/.bashrc
