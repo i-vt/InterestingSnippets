@@ -8,12 +8,23 @@ run angristan_wireguard-installer.sh, OG source: [here](https://github.com/angri
 
 ### Linux
 ```
-sudo apt install wireguard
+sudo apt install wireguard -y
+sudo apt install resolvconf -y
+```
+Add this to the `~/.bashrc`: `export PATH=$PATH:/usr/sbin`
+```
+vi ~/bashrc
+source ~/.bashrc
 # copy from root@server# ~/wg0-client-computer1.conf
 sudo vi /etc/wireguard/wg0.conf
 wg-quick up /etc/wireguard/wg0.conf
+sudo reboot
 ```
 
+To add to startup: 
+```
+sudo systemctl enable wg-quick@wg0
+```
 
 Turn off wireguard
 ```
