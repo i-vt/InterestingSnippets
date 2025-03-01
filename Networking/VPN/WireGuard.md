@@ -17,15 +17,18 @@ vi ~/bashrc
 source ~/.bashrc
 # copy from root@server# ~/wg0-client-computer1.conf
 sudo vi /etc/wireguard/wg0.conf
-wg-quick up /etc/wireguard/wg0.conf
 sudo reboot
 ```
+
 
 To add to startup: 
 ```
 sudo systemctl enable wg-quick@wg0
 ```
-
+To turn on wireguard
+```
+wg-quick up /etc/wireguard/wg0.conf
+```
 Turn off wireguard
 ```
 wg-quick down /etc/wireguard/wg0.conf
