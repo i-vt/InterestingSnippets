@@ -61,5 +61,5 @@ urlzgoherelmao
 
 for one_url in URLs.split("\n"):
     if one_url == "": continue
-    name = one_url.split("/")[5]
+    name = one_url.split("/")[5] + ".mp3"
     download_podcast(one_url,name)
