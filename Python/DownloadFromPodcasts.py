@@ -1,7 +1,8 @@
+# Requires selenim & selenium-wire  installed (see InstallSelenium.md for selenium guide), selenium-wire needs to be downloaded via pip
+
 import time
 from seleniumwire import webdriver
 from selenium.webdriver.common.by import By
-import uuid
 
 
 def download_podcast(url, mp3_filename):
