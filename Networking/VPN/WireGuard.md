@@ -4,6 +4,13 @@
 
 run angristan_wireguard-installer.sh, OG source: [here](https://github.com/angristan/wireguard-install/blob/master/wireguard-install.sh)
 
+```
+curl  -o wireguard-installer.sh https://raw.githubusercontent.com/i-vt/InterestingSnippets/refs/heads/main/Networking/VPN/angristan_wireguard-installer.sh
+chmod +x wireguard-installer.sh
+./wireguard-installer.sh
+```
+
+
 ## Client Configs
 
 ### Linux
