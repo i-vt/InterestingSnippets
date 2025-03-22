@@ -1,0 +1,79 @@
+Terms of Service Agreement
+
+Last Updated: 2025/03/22
+
+Definitions and Acceptance of the Terms
+
+Definitions:
+
+User refers to any individual who installs, accesses, or uses this software. The term User includes all persons and entities that indirectly benefit from or use the Application via the primary User.
+
+Developer refers to the creator of Remote Access / Management Tool Named Installer.
+
+Affiliated Parties refers to all partners, subsidiaries, employees, officers, agents, or licensors associated with the Developer.
+
+Binding Agreement:
+
+This Terms of Service Agreement constitutes a legally binding agreement made between you, whether personally or on behalf of an entity (you) and the developers (including parties affiliated) (we, us, or our), concerning your access to and use of the Remote Access / Management Tool Named Installer (Software). You agree that by installing, accessing, or using the Software, you have read, understood, and agree to be bound by this Agreement. IF YOU DO NOT AGREE WITH ALL OF THESE TERMS, DO NOT INSTALL, ACCESS, OR USE THE SOFTWARE.
+
+Waiver of Rights to Sue:
+
+By agreeing to these Terms, you expressly understand and agree that you hereby forfeit the right to sue the Developer or any of the Affiliated Parties in any court regarding any dispute or claim relating to the use of the Software, its services, or any related transactions, under any circumstance. This includes any claims based on service failures, maintenance issues, data loss, and system downtime, regardless of whether such issues were within the control of the Developer or Affiliated Parties.
+
+Limitation of Legal Actions:
+
+To the extent permitted by applicable law, you agree that any disputes or claims that you may have against the Developer or Affiliated Parties will be resolved by binding arbitration, rather than in court, except that you may assert claims in small claims court if your claims qualify. The Federal Arbitration Act and federal arbitration law apply to this agreement.
+
+The arbitration will be conducted by a neutral arbitrator who is a member of an organization that is mutually agreed upon by all parties, and if the parties cannot agree, then the arbitrator will be appointed by a court of law. The location of arbitration shall be Your City/State, Your Country.
+
+The arbitrator's decision shall be final and binding on all parties.
+
+By clicking I Accept, installing, accessing, or using the Software, you affirm that you are of legal age to enter into this Agreement and that you willingly agree to be bound by all of its terms.
+
+This snippet should be customized with details specific to your software and legal jurisdiction to ensure its enforceability and compliance with local laws. Always consider consulting with a legal professional to tailor the terms accurately to your specific circumstances.
+
+Welcome to Remote Access / Management Tool Named Installer. By installing, accessing, or using our software and services, you agree to be bound by the terms of this Agreement. If you do not agree to the terms of this Agreement, please do not install or use our software.
+
+Acceptance of Terms
+
+By accepting these Terms of Service ("Terms"), you confirm that you are at least 18 years of age or have legal parental or guardian consent and are fully able and competent to enter into the terms, conditions, obligations, affirmations, representations, and warranties set forth in these Terms, and to abide by and comply with these Terms.
+
+Authorization of Access
+
+Grant of Authorization: By installing Remote Access / Management Tool Named Installer, you authorize us to access, connect to, and remotely manage the devices on which the tool is installed ("Device"). This includes the authority to access the entire network connected to the Device, and all files, applications, and system components within the Device.
+
+Scope of Access: Our access includes but is not limited to:
+
+Viewing and modifying files;
+
+Changing settings and configurations;
+
+Installing and uninstalling applications and software;
+
+Accessing system and application logs.
+
+Consent to Monitor: You acknowledge that our activities may include monitoring the usage and activities on the Device, and you consent to such monitoring. Monitoring is done to facilitate the provision of our services, including support, maintenance, and error correction.
+
+Liability Waiver
+
+Limitation of Liability: To the fullest extent permitted by law, the developer and/or affiliated parties shall not be liable for any direct, indirect, incidental, special, consequential, or exemplary damages, including but not limited to, damages for loss of profits, goodwill, use, data or other intangible losses (even if the developer and/or affiliated parties have been advised of the possibility of such damages), resulting from the use or the inability to use the service.
+
+Indemnification: You agree to indemnify and hold harmless the developer and/or affiliated parties and their affiliates, officers, agents, employees, partners, and licensors from any claim or demand, including reasonable attorneys’ fees, made by any third party due to or arising out of your use of the service, your connection to the service, your violation of the Terms, or your violation of any rights of another.
+
+Use of Software
+
+You agree to use Remote Access / Management Tool Named Installer only for purposes that are legal, ethical, and in accordance with these Terms and any applicable laws and regulations.
+
+Modification of Terms
+
+The developer and/or affiliated parties reserve the right, at their sole discretion, to modify or replace these Terms at any time. If the alterations constitute a material change to the Terms, the developer and/or affiliated parties will notify you by posting an announcement on the service. What constitutes a material change will be determined at the developer's and/or affiliated parties' sole discretion. You shall be responsible for reviewing and becoming familiar with any such modifications. Using any service following notification of a material change to the Terms shall constitute your acceptance of the Terms as modified.
+
+Termination
+
+The developer and/or affiliated parties may terminate your access to all or any part of the service at any time, with or without cause, with or without notice, effective immediately. If you wish to terminate this Agreement or your Remote Access / Management Tool Named Installer account (if you have one), you may simply discontinue using the service.
+
+Governing Law
+
+These Terms shall be governed by and construed in accordance with the laws of Your State/Country, without giving effect to any principles of conflicts of law.
+
+By clicking I Accept or by installing, accessing, or using Remote Access / Management Tool Named Installer, you acknowledge that you have read, understood, and agree to be bound by these Terms.
