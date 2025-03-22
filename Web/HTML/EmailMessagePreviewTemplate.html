@@ -1,41 +1,56 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Notification</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f4f4f4;
             margin: 0;
             padding: 0;
         }
         .email-container {
+            position: relative;
             max-width: 600px;
-            margin: 20px auto;
+            margin: 30px auto;
             background: #ffffff;
             padding: 20px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
+        .icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 30px;
+            height: 30px;
+            background-image: url('URL_TO_ICON_IMAGE');
+            background-size: cover;
+        }
         .header {
-            background-color: #004aad;
+            background-color: #0057b7;
             color: #ffffff;
             padding: 10px 20px;
             text-align: center;
+            font-size: 24px;
         }
-        .message-content {
+        .message-content, .footer-section {
             padding: 20px;
             text-align: left;
+            font-size: 14px;
         }
         .user-image {
             display: block;
-            margin: 0 auto 20px;
+            margin: 10px auto 20px;
             width: 100px;
             height: 100px;
             border-radius: 50%;
-            border: 3px solid #004aad;
+            border: 4px solid #0057b7;
         }
         .see-more-button {
             display: block;
-            width: 180px;
+            width: 200px;
             margin: 20px auto;
             text-align: center;
             padding: 10px;
@@ -43,22 +58,72 @@
             color: #ffffff;
             text-decoration: none;
             border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        .see-more-button:hover {
+            background-color: #0056b3;
+            box-shadow: 0 3px 7px rgba(0,0,0,0.3);
+        }
+        .app-links, .social-links a {
+            display: inline-block;
+            margin: 0 10px;
+        }
+        .app-links img, .social-links img {
+            width: 35px;
+            height: 35px;
+        }
+        .privacy-policy {
+            font-size: 12px;
+            text-align: center;
+            margin-top: 10px;
+            color: #666;
+        }
+        blockquote {
+            padding: 20px;
+            background-color: #f0f8ff;
+            border-left: 5px solid #007bff;
+            font-style: normal;
+            margin: 20px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
         }
     </style>
 </head>
 <body>
     <div class="email-container">
+        <div class="icon"></div> <!-- Icon placeholder -->
         <div class="header">
-            <h1>Message Preview</h1>
+            <h1>Email Notification</h1>
         </div>
         <div class="message-content">
             <img src="URL_TO_USER_IMAGE" alt="User Picture" class="user-image">
             <p>Hello [Recipient's Name],</p>
-            <p>Here's a preview of the latest message for you:</p>
+            <p>Please find below a preview of the latest message addressed to you:</p>
             <blockquote>
-                "This is where the actual message preview will appear. It can be two or three lines long to give enough context about the message content."
+                "Here, the content of the message preview will be shown. It will typically span two to three sentences to adequately convey the essential details of the message."
             </blockquote>
-            <a href="URL_TO_FULL_MESSAGE" class="see-more-button">See More</a>
+            <a href="URL_TO_FULL_MESSAGE" class="see-more-button">Read Full Message</a>
+        </div>
+        <div class="footer-section">
+            <p>Enhance your experience with our mobile app, available on:</p>
+            <div class="app-links">
+                <a href="URL_TO_GOOGLE_PLAY"><img src="https://upload.wikimedia.org/wikipedia/commons/a/ab/Android_O_Preview_Logo.png" alt="Download on Google Play"></a>
+                <a href="URL_TO_APP_STORE"><img src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Apple_logo_black.svg" alt="Download on the App Store"></a>
+            </div>
+            <p>For support or inquiries, please visit our <a href="URL_TO_HELP_CENTER">Help Center</a>.</p>
+            <div class="social-links">
+                <a href="URL_TO_PINTEREST"><img src="https://upload.wikimedia.org/wikipedia/commons/0/08/Pinterest-logo.png" alt="Follow us on Pinterest"></a>
+                <a href="URL_TO_FACEBOOK"><img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg" alt="Like us on Facebook"></a>
+                <a href="URL_TO_YOUTUBE"><img src="https://upload.wikimedia.org/wikipedia/commons/b/b8/YouTube_Logo_2017.svg" alt="Subscribe to our YouTube channel"></a>
+                <a href="URL_TO_INSTAGRAM"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Follow us on Instagram"></a>
+            </div>
+            <p>For your safety and security, we do not request personal information via email. If you receive such a request, please do not respond. <a href="URL_TO_PRIVACY_POLICY">Learn more about our Privacy Policy and online security practices.</a></p>
+            <p>Do not reply to this email as this address is not monitored.</p>
+            <p>© 2025 Company Name. All rights reserved.</p>
+            <p>100 Jackson Ave, Suite 400, Austin, TX 78701</p>
+            <p><a href="URL_TO_CUSTOMER_SERVICE">Customer Service</a> | <a href="URL_TO_PRIVACY_POLICY">Privacy Policy</a> | <a href="URL_TO_TERMS_SERVICE">Terms of Service</a></p>
         </div>
     </div>
 </body>
