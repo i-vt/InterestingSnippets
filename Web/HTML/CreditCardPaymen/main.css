@@ -1,0 +1,114 @@
+body {
+    font-family: Roboto;
+}
+
+body #norbr-payment-container-inner_v3 {
+    margin: 0;
+    font: normal normal normal 18px/22px Roboto;
+    font-weight: 400 !important;
+    line-height: 1.5;
+    color: #000000DE;
+    background-color: #fff;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+}
+
+#norbr-payment-container-inner_v3 .norbr-label,
+#norbr-payment-container-inner_v3 .norbr-form-cin-saved .norbr-label {
+    font: normal normal bold 15px/18px Roboto;
+    letter-spacing: 0;
+    color: #00000080;
+}
+
+#norbr-payment-container-inner_v3 .norbr-card-four_saved,
+#norbr-payment-container-inner_v3 .norbr-card-four_used,
+#norbr-payment-container-inner_v3 .norbr-form-expiry_saved,
+#norbr-payment-container-inner_v3 .norbr-form-expiry_used,
+#norbr-payment-container-inner_v3 .norbr-pay-body input,
+#norbr-payment-container-inner_v3 .norbr-pay-body select {
+    font: normal normal 400 16px/20px Roboto;
+}
+
+#norbr-payment-container-inner_v3 .norbr-payment-details-info #norbr-payment-expiry input {
+    width: 60px;
+}
+
+#error {
+    margin-top: 35px;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    background-color: #fff;
+    z-index: 999;
+    opacity: 80%;
+    display: flex;
+    align-items: center;
+}
+
+#error #error-message,
+#loader #loader-container svg {
+    font: normal normal normal 18px/24px Roboto;
+    letter-spacing: 0;
+    color: #363636;
+}
+
+a#back-link {
+    text-transform: none !important;
+    top: 26px;
+    left: 78px;
+    width: 256px;
+    height: 29px;
+    text-align: center;
+    font: normal normal bold 18px/21px Roboto;
+    letter-spacing: 0;
+    color: #0275ff;
+    opacity: 1;
+    text-transform: uppercase;
+    text-decoration: none;
+}
+
+#norbr-payment-container-inner_v3 .norbr-payment-details-info,
+#norbr-payment-container-inner_v3 .norbr-pay-body .norbr-row-internal .norbr-payment-calendar,
+#norbr-payment-container-inner_v3 .norbr-card-four_saved,
+#norbr-payment-container-inner_v3 .norbr-card-four_used,
+#norbr-payment-container-inner_v3 .norbr-pay-body .norbr-row-internal #norbr-payment-zip-code_saved {
+    display: flex;
+    align-items: center;
+}
+
+button#submit-button,
+button#norbr-payment-button-element {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: .5rem 1rem;
+    font: normal normal bold 18px/22px Roboto;
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    background: #0275ff 0 0 no-repeat padding-box;
+    box-shadow: 0 3px 5px #00000080;
+    text-align: center;
+    color: #fff;
+    border: none;
+    text-transform: uppercase;
+    border-radius: 30px;
+    height: 46px;
+    margin-bottom: 20px;
+}
+
+@media (max-width: 610px) {
+    #error #error-message {
+        text-align: center;
+        font: normal normal normal 14px/22px Roboto;
+        color: #363636;
+    }
+
+    .header a span {
+        font-size: 14px !important;
+    }
+}
