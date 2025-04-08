@@ -3,7 +3,7 @@
 sudo apt update
 sudo apt upgrade
 
-sudo apt install curl tree python3-pip plocate
+sudo apt install curl tree python3-pip plocate snapd
 sudo apt install python3-venv
 
 echo "-------[current ip]-------"
