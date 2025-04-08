@@ -4,7 +4,7 @@
 sudo apt update && sudo apt upgrade || { echo 'Failed to update and upgrade packages'; exit 1; }
 
 # Install necessary packages
-sudo apt install -y curl tree python3-pip plocate snapd python3-venv || { echo 'Failed to install packages'; exit 1; }
+sudo apt install curl tree python3-pip plocate snapd python3-venv -y || { echo 'Failed to install packages'; exit 1; }
 
 # Download and save the .vimrc file to the home directory
 wget https://raw.githubusercontent.com/i-vt/InterestingSnippets/refs/heads/main/Linux/.vimrc --output-document=$HOME/.vimrc || { echo 'Failed to download .vimrc'; exit 1; }
