@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+export DEBIAN_FRONTEND=noninteractive
 # Update and upgrade the system packages non-interactively
 sudo apt update -y && sudo apt upgrade -y || { echo 'Failed to update and upgrade packages'; exit 1; }
 
