@@ -20,7 +20,7 @@ sudo apt install resolvconf -y
 ```
 Add this to the `~/.bashrc` file: `export PATH=$PATH:/usr/sbin`
 ```
-vi ~/bashrc
+vi ~/.bashrc
 source ~/.bashrc
 # copy from root@server# ~/wg0-client-computer1.conf
 sudo vi /etc/wireguard/wg0.conf
