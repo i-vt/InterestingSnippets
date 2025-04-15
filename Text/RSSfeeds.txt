@@ -55,7 +55,6 @@ https://www.secureblink.com/rss-feeds/threat-feed
 https://www.seqrite.com/blog/feed
 https://www.techrepublic.com/rssfeeds/topic/security/?feedType=rssfeeds
 https://www.tripwire.com/state-of-security/feed/
-https://www.tsfactory.com/forums/blogs/category/infosec-digest/feed/
 https://www.upguard.com/blog/rss.xml
 https://www.veracode.com/blog/feed
 https://www.webroot.com/blog/feed/
