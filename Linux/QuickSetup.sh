@@ -6,6 +6,8 @@ sudo apt update -y && sudo apt upgrade -y || { echo 'Failed to update and upgrad
 # Install necessary packages
 sudo apt install -y curl tree python3-pip plocate snapd python3-venv tmux git-all || { echo 'Failed to install packages'; exit 1; }
 
+sudo snap refresh 
+
 # Download and save the .vimrc file to the home directory
 wget https://raw.githubusercontent.com/i-vt/InterestingSnippets/refs/heads/main/Linux/.vimrc --output-document=$HOME/.vimrc || { echo 'Failed to download .vimrc'; exit 1; }
 
