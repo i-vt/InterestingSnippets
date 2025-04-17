@@ -18,9 +18,11 @@ chmod +x wireguard-installer.sh
 sudo apt install wireguard -y
 sudo apt install resolvconf -y
 ```
-Add this to the `~/.bashrc` file: `export PATH=$PATH:/usr/sbin`
+Add run this `vi ~/.bashrc`  to and verify this is present in the file: `export PATH=$PATH:/usr/sbin`
 ```
-vi ~/.bashrc
+echo "alias wgup='wg-quick up /etc/wireguard/wg0.conf'" >> ~/.bashrc
+echo "alias wgdown='wg-quick down /etc/wireguard/wg0.conf'" >> ~/.bashrc
+
 source ~/.bashrc
 # copy from root@server# ~/wg0-client-computer1.conf
 sudo vi /etc/wireguard/wg0.conf
@@ -34,12 +36,14 @@ sudo systemctl enable wg-quick@wg0
 ```
 To turn on wireguard
 ```
-wg-quick up /etc/wireguard/wg0.conf
+sudo wgup
 ```
 Turn off wireguard
 ```
-wg-quick down /etc/wireguard/wg0.conf
+sudo wgdown
 ```
 ### iOS
 
 Install WireGuard client from app store
+![image](https://github.com/user-attachments/assets/18330c08-2ddf-4ecd-8d66-0f5ccb5da32d)
+
