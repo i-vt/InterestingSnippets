@@ -9,7 +9,18 @@ sudo apt install -y curl tree python3-pip plocate snapd python3-venv tmux git-al
 # Download and save the .vimrc file to the home directory
 wget https://raw.githubusercontent.com/i-vt/InterestingSnippets/refs/heads/main/Linux/.vimrc --output-document=$HOME/.vimrc || { echo 'Failed to download .vimrc'; exit 1; }
 
+
+# Clean up
+sudo apt autoremove -y
+sudo apt clean
+
 # Display the current IP address
-echo "-------[current ip]-------"
+echo "-------[Current IP]-------"
 curl https://api.ipify.org/ || { echo 'Failed to fetch IP address'; exit 1; }
 echo ""
+
+# Basic system info
+echo "-------[System Info]-------"
+uname -a
+lsb_release -a
+
