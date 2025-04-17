@@ -17,12 +17,10 @@ chmod +x wireguard-installer.sh
 ```
 sudo apt install wireguard -y
 sudo apt install resolvconf -y
-```
-Add run this `vi ~/.bashrc`  to and verify this is present in the file: `export PATH=$PATH:/usr/sbin`
-```
+touch ~/.bashrc
+[ -f ~/.bashrc ] && grep -Fxq 'export PATH=$PATH:/usr/sbin' ~/.bashrc || echo 'export PATH=$PATH:/usr/sbin' >> ~/.bashrc
 echo "alias wgup='wg-quick up /etc/wireguard/wg0.conf'" >> ~/.bashrc
 echo "alias wgdown='wg-quick down /etc/wireguard/wg0.conf'" >> ~/.bashrc
-
 source ~/.bashrc
 # copy from root@server# ~/wg0-client-computer1.conf
 sudo vi /etc/wireguard/wg0.conf
