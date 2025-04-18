@@ -1,3 +1,5 @@
+# https://www.trendmicro.com/en_us/research/24/h/cve-2023-22527-cryptomining.html
+
 # Remove 'immutable' and 'append-only' attributes from the root crontab file
 chattr -ia /var/spool/cron/root
 
