@@ -1,3 +1,4 @@
+# https://www.trendmicro.com/en_us/research/24/h/cve-2023-22527-cryptomining.html
 scan_ssh_keys_and_spread() {
   echo "localgo start"
 
