@@ -44,7 +44,9 @@ class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         elif self.path == '/curl-help':
             self.send_response(200)
             self.end_headers()
-            self.wfile.write(b'Use curl to upload files: curl -F "file=@<filename>" http://localhost:2020/')
+            self.wfile.write(b'Use curl to upload files: ')
+            self.wfile.write(b'curl -F "file=@<filename>" http://localhost:2020/')
+            self.wfile.write(b'Invoke-RestMethod -Uri "http://youripgoeshere:2020/" -Method Post -Form @{ file = Get-Item "C:\test.save" }')
             return
         return http.server.SimpleHTTPRequestHandler.do_GET(self)
 
