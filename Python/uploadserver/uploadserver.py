@@ -41,16 +41,7 @@ class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
         if self.path == '/':
             self.path = 'index.html'
-        elif self.path == '/curl-help':
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(b'Use curl to upload files: ')
-            self.wfile.write(b'Linux: curl -F "file=@<filename>" http://localhost:2020/')
-            self.wfile.write(b'Windows: https://raw.githubusercontent.com/i-vt/InterestingSnippets/refs/heads/main/Windows/Powershell/UploadFilePOST.ps1')
-            self.wfile.write(b'')
-            self.wfile.write(b'Ensure that the index.html is present in the same dir')
-            self.wfile.write(b'Keep in mind that files in this dir can be discovered by visiting /someotherfile.txt')
-            return
+
         return http.server.SimpleHTTPRequestHandler.do_GET(self)
 
 Handler = SimpleHTTPRequestHandler
