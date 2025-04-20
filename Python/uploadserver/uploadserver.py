@@ -45,8 +45,11 @@ class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.end_headers()
             self.wfile.write(b'Use curl to upload files: ')
-            self.wfile.write(b'curl -F "file=@<filename>" http://localhost:2020/')
-            self.wfile.write(b'Invoke-RestMethod -Uri "http://youripgoeshere:2020/" -Method Post -Form @{ file = Get-Item "C:\test.save" }')
+            self.wfile.write(b'Linux: curl -F "file=@<filename>" http://localhost:2020/')
+            self.wfile.write(b'Windows: https://raw.githubusercontent.com/i-vt/InterestingSnippets/refs/heads/main/Windows/Powershell/UploadFilePOST.ps1')
+            self.wfile.write(b'')
+            self.wfile.write(b'Ensure that the index.html is present in the same dir')
+            self.wfile.write(b'Keep in mind that files in this dir can be discovered by visiting /someotherfile.txt')
             return
         return http.server.SimpleHTTPRequestHandler.do_GET(self)
 
