@@ -68,20 +68,20 @@ class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 Handler = SimpleHTTPRequestHandler
 
 with socketserver.TCPServer(("", PORT), Handler) as httpd:
-    print("\n" + "-" * 60)
+    print("\n" + "/-" * 60)
     print(f"Server is running on port {PORT}.")
     print("You can upload files using the following methods:\n")
 
     print("Upload Instructions:")
-    print("  • Linux/macOS:")
+    print("  + Linux/macOS:")
     print('    curl -F "file=@<filename>" http://localhost:2020/')
-    print("  • Windows (PowerShell script):")
+    print("  + Windows (PowerShell script):")
     print("    https://raw.githubusercontent.com/i-vt/InterestingSnippets/refs/heads/main/Windows/Powershell/UploadFilePOST.ps1\n")
 
     print("Notes:")
-    print("  • Ensure that 'index.html' is present in the same directory.")
-    print("  • Files in this directory can be accessed directly by URL, e.g., /someotherfile.txt")
-    print("-" * 60 + "\n")
+    print("  + Ensure that 'index.html' is present in the same directory as uploadserver.py.")
+    print("  + Files in this directory can be accessed directly by URL, e.g., /someotherfile.txt")
+    print("-\" * 60 + "\n")
 
 
     httpd.serve_forever()
