@@ -47,6 +47,15 @@ class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 Handler = SimpleHTTPRequestHandler
 
 with socketserver.TCPServer(("", PORT), Handler) as httpd:
+    print()
     print(f"Serving on port {PORT}. You can upload files using curl with the following command:")
-    print(f'curl -F "file=@path_to_your_file" http://localhost:{PORT}/')
+    print()
+    print('Use curl to upload files:')
+    print('Linux: curl -F "file=@<filename>" http://localhost:2020/')
+    print('Windows: https://raw.githubusercontent.com/i-vt/InterestingSnippets/refs/heads/main/Windows/Powershell/UploadFilePOST.ps1')
+    print()
+    print('Ensure that the index.html is present in the same dir')
+    print('Keep in mind that files in this dir can be discovered by visiting /someotherfile.txt')
+
+    
     httpd.serve_forever()
