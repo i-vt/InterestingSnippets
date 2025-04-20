@@ -81,7 +81,7 @@ with socketserver.TCPServer(("", PORT), Handler) as httpd:
     print("Notes:")
     print("  + Ensure that 'index.html' is present in the same directory as uploadserver.py.")
     print("  + Files in this directory can be accessed directly by URL, e.g., /someotherfile.txt")
-    print("-\" * 60 + "\n")
+    print("-\\" * 60 + "\n")
 
 
     httpd.serve_forever()
