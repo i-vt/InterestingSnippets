@@ -25,6 +25,7 @@ echo ""
 echo "alias s2020='python3 -m http.server 2020'" >> ~/.bashrc
 echo "alias s2021='python3 -m http.server 2021'" >> ~/.bashrc
 echo "alias s2022='python3 -m http.server 2022'" >> ~/.bashrc
+source ~/.bashrc
 
 # Basic system info
 echo "-------[System Info]-------"
