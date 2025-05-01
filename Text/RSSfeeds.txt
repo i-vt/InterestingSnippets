@@ -18,7 +18,6 @@ https://krebsonsecurity.com/feed/
 https://lab.wallarm.com/feed/
 https://lynxtechnologypartners.com/blog/feed/
 https://news.sophos.com/en-us/feed/
-https://personalprivacyonline.com/feed/
 https://protegent360.com/blog/feed/
 https://sectigostore.com/blog/feed/
 https://securityaffairs.co/wordpress/feed
