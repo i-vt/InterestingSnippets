@@ -31,7 +31,6 @@ https://wesecureapp.com/feed/
 https://www.acunetix.com/blog/feed/
 https://www.blackfog.com/feed/
 https://www.bleepingcomputer.com/feed/
-https://www.canarytrap.com/feed/
 https://www.cm-alliance.com/cybersecurity-blog/rss.xml
 https://www.csoonline.com/feed/
 https://www.cyberdefensemagazine.com/feed/
