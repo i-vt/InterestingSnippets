@@ -37,7 +37,6 @@ https://www.cyberdefensemagazine.com/feed/
 https://www.cyberpilot.io/cyberpilot-blog/rss.xml
 https://www.darkreading.com/rss.xml
 https://www.exploitone.com/feed/
-https://www.flyingpenguin.com/?feed=rss2
 https://www.ignyteplatform.com/feed/
 https://www.infosecurity-magazine.com/rss/news/
 https://www.itgovernance.co.uk/blog/category/cyber-security/feed
