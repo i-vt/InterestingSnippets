@@ -36,7 +36,6 @@ https://www.cm-alliance.com/cybersecurity-blog/rss.xml
 https://www.csoonline.com/feed/
 https://www.cyberdefensemagazine.com/feed/
 https://www.cyberpilot.io/cyberpilot-blog/rss.xml
-https://www.cybertalk.org/feed/
 https://www.darkreading.com/rss.xml
 https://www.exploitone.com/feed/
 https://www.flyingpenguin.com/?feed=rss2
