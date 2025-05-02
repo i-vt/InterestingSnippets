@@ -16,6 +16,13 @@ sudo apt clean
 # Download and save the .vimrc file to the home directory
 wget https://raw.githubusercontent.com/i-vt/InterestingSnippets/refs/heads/main/Linux/.vimrc --output-document=$HOME/.vimrc || { echo 'Failed to download .vimrc'; exit 1; }
 
+# Check if /etc/resolv.conf already has 8.8.8.8 or 1.1.1.1
+if ! grep -qE 'nameserver (8\.8\.8\.8|1\.1\.1\.1)' /etc/resolv.conf; then
+  echo "Neither 8.8.8.8 nor 1.1.1.1 found. Adding 8.8.8.8..."
+  echo "nameserver 8.8.8.8" | sudo tee -a /etc/resolv.conf > /dev/null
+else
+  echo "Nameserver already set correctly."
+fi
 
 # Shortcuts
 echo "alias s2020='python3 -m http.server 2020'" >> ~/.bashrc
