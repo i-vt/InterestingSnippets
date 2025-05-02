@@ -1,0 +1,66 @@
+<!-- Gotta run it from a python3 http.server or something - otherwise it will error out -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IP Info Fetcher</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    .info {
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="ip_add" class="info">Address IP: Loading...</div>
+  <div id="city" class="info">City: Loading...</div>
+  <div id="isp" class="info">ISP: Loading...</div>
+
+  <script>
+    (function() {
+      fetch("https://ipwho.is/?lang=en")
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Network response was not ok (${response.status})`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          const ipAddress = data.ip;
+          const city = data.city;
+          const country = data.country;
+          const isp = data.connection?.isp || "Unknown ISP";
+          const timezoneName = data.timezone?.name;
+          const date = new Date();
+
+          const ipElement = document.getElementById("ip_add");
+          const cityElement = document.getElementById("city");
+          const ispElement = document.getElementById("isp");
+
+          if (ipElement) {
+            ipElement.textContent = `Address IP: ${ipAddress} (${date.toLocaleString("en-US", { timeZone: timezoneName })})`;
+          }
+          if (cityElement) {
+            cityElement.textContent = `City: ${city}, ${country}`;
+          }
+          if (ispElement) {
+            ispElement.textContent = `ISP: ${isp}`;
+          }
+        })
+        .catch(error => {
+          console.error("Failed to fetch IP information:", error);
+          document.getElementById("ip_add").textContent = "Error fetching IP info.";
+          document.getElementById("city").textContent = "";
+          document.getElementById("isp").textContent = "";
+        });
+    })();
+  </script>
+
+</body>
+</html>
