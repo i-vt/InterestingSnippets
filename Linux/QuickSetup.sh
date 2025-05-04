@@ -1,7 +1,31 @@
 #!/usr/bin/env bash
 export DEBIAN_FRONTEND=noninteractive
 # Update and upgrade the system packages non-interactively
+
+
+# Check if sudo is installed
+if command -v sudo >/dev/null 2>&1; then
+  echo "sudo is already installed."
+else
+  echo "sudo is NOT installed. Attempting to install..."
+
+  # Install sudo using apt
+  apt-get update
+  apt-get install -y sudo
+
+  # Verify installation
+  if command -v sudo >/dev/null 2>&1; then
+    echo "sudo installed successfully."
+  else
+    echo "Failed to install sudo."
+    exit 2
+  fi
+fi
+
+
 sudo apt update -y && sudo apt upgrade -y || { echo 'Failed to update and upgrade packages'; exit 1; }
+
+
 
 # Install necessary packages
 sudo apt install -y curl tree python3-pip plocate snapd python3-venv tmux git-all || { echo 'Failed to install packages'; exit 1; }
