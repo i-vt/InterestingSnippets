@@ -1,6 +1,13 @@
 import argparse
 import requests
 import subprocess
+import os
+import shutil
+import datetime
+
+def timestamp() -> str:
+    current = datetime.datetime.now()
+    return current.strftime("%Y%m%d%H%M%S")
 
 def run_shell_command(command):
     try:
@@ -44,26 +51,30 @@ def get_github_pages(username_passed, limit_pages=10000):
                 pages.append(dir)
                 print(dir, len(pages))
                 count1 = len(pages)
-        print(count1, count2)
         if count1 == count2:
             break
         count2 = count1
     return pages
 
-def download_github_pages(pages_passed, force=False):
+def ensure_folder_exists(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+        print(f"Created directory: {path}")
+
+def download_github_pages(pages_passed, dir_passed="./"):
+    now = timestamp()
+    filepath = os.path.join(dir_passed, now)
+    ensure_folder_exists(filepath)
     for page in pages_passed:
-        print("=====================//\nAttempting to download:", page.split("/")[2])
-        if force:
-            run_shell_command("git clone --force https://github.com" + page)
-        else:
-            run_shell_command("git clone https://github.com" + page)
+        repo_name = page.split("/")[2]
+        print("=====================//\nAttempting to download:", repo_name)
+        run_shell_command(f"git clone https://github.com{page} {filepath}/{repo_name}")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Download GitHub repositories of a user (requires GIT installed).")
+    parser = argparse.ArgumentParser(description="Download GitHub repositories of a user.")
     parser.add_argument("username", help="GitHub username to fetch repositories for")
-    parser.add_argument("--force", action="store_true", help="Force clone the repositories")
-
+    parser.add_argument("--path", default="./", help="Directory to save downloaded repositories")
     args = parser.parse_args()
 
     pages = get_github_pages(args.username)
-    download_github_pages(pages, force=args.force)
+    download_github_pages(pages, dir_passed=args.path)
