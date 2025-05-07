@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Get CPU idle percentage and compute usage
+# Get CPU idle percentage and compute usage using sysstat
 idle=$(sar 1 1 | grep "Average" | awk '{print $8}')
 
 # Calculate CPU usage (integer only, no decimals)
