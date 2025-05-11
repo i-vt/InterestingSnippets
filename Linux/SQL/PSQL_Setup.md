@@ -32,16 +32,18 @@ ALTER USER superuser WITH SUPERUSER;
 ### Enable remote access
 Edit settings postgreesql.conf
 ```
-sudo vim /etc/postgresql/<version>/main/postgresql.conf
+sudo vi /etc/postgresql/<version>/main/postgresql.conf
 ```
 Change line to uncommented and replace localhost with a star or something more specific
 ```listen_addresses = '*'```
 Edit settings pg_hba.conf
 ```
-sudo nano /etc/postgresql/<version>/main/pg_hba.conf
+sudo vi /etc/postgresql/<version>/main/pg_hba.conf
 ```
 Modify the host configs, (split them with a tab
-```host    all             all             <IP>/32            md5```
+```
+host    all             all             <IP>/32            md5
+```
 
 Modify UFW rules:
 ```
