@@ -7,10 +7,14 @@
 - Basic recurring task: `task add Work due:eod recur:daily tag:job`
 - Add priority to tasks: Available options `H,M,L` and a task is as follows `task add vacuume4 priority:L`
 
-### Complate Tasks
+### Complete Tasks
 - One task: `task 54 done`
 - Multiple tasks: `task 123 432 done`
 - All expired tasks: `task +PENDING due.before:now done`
+
+### Modify Tasks
+`task 412 modify priority:H`
+Works even for recurring
 
 ### Delete Tasks
 `task 22 delete`
