@@ -22,6 +22,7 @@ else
 fi
 
 
+
 # Update and upgrade the system packages non-interactively
 sudo apt update -y && sudo apt upgrade -y || { echo 'Failed to update and upgrade packages'; exit 1; }
 
@@ -34,6 +35,12 @@ sudo snap refresh
 
 
 # Clean up
+sudo dpkg -l 'linux-image-*' | \
+  awk '/^ii/{ print $2 }' | \
+  grep -v $(uname -r) | \
+  grep -E 'linux-image-[0-9]+' | \
+  sort | head -n -1 | \
+  xargs sudo apt -y purge
 sudo apt autoremove -y
 sudo apt clean
 
