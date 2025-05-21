@@ -55,11 +55,30 @@ else
   echo "Nameserver already set correctly."
 fi
 
-# Shortcuts
-echo "alias s2020='python3 -m http.server 2020'" >> ~/.bashrc
-echo "alias s2021='python3 -m http.server 2021'" >> ~/.bashrc
-echo "alias s2022='python3 -m http.server 2022'" >> ~/.bashrc
-source ~/.bashrc
+# Define aliases to add
+ALIASES=(
+  "alias s2020='python3 -m http.server 2020'"
+  "alias s2021='python3 -m http.server 2021'"
+  "alias s2022='python3 -m http.server 2022'"
+)
+
+# File to modify
+BASHRC="$HOME/.bashrc"
+
+# Add comment if not already present
+if ! grep -q "# Shortcuts" "$BASHRC"; then
+  echo -e "\n# Shortcuts" >> "$BASHRC"
+fi
+
+# Add aliases if not already defined
+for ALIAS in "${ALIASES[@]}"; do
+  if ! grep -Fq "$ALIAS" "$BASHRC"; then
+    echo "$ALIAS" >> "$BASHRC"
+  fi
+done
+
+# Source the updated file
+source "$BASHRC"
 
 # Display the current IP address
 echo "-------[Current IP]-------"
