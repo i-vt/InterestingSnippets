@@ -1,33 +1,42 @@
-root@srv718962:~# cat 1.sh 
 #!/bin/bash
+
+# Expected: 
+# ls -lah /root/ssl
+# -rw-r--r-- 1 root root 5.6K May 22 06:57 example_com.ca-bundle
+# -rw-r--r-- 1 root root 2.3K May 22 06:57 example_com.crt
+# -rw-r--r-- 1 root root 7.6K May 22 06:57 example_com.p7b
+# -rw-r--r-- 1 root root  14K May 22 08:46 backup_20250522.zip
+# -rw-r--r-- 1 root root 1.1K May 22 06:13 server.csr
+# -rw-r--r-- 1 root root 1.7K May 22 06:12 server.key
+
 
 set -e
 
-DOMAIN="advertisement-telemetry.com"
+DOMAIN="example.com"
 SSL_DIR="/root/ssl"
 NGINX_CONF="/etc/nginx/sites-available/$DOMAIN"
 WEB_ROOT="/var/www/$DOMAIN/html"
 FULLCHAIN_PATH="/etc/ssl/certs/$DOMAIN.fullchain.crt"
 KEY_PATH="/etc/ssl/private/$DOMAIN.key"
 
-echo "🔧 Installing NGINX..."
+echo "Installing NGINX..."
 apt update && apt install -y nginx
 
-echo "🧹 Stopping Apache to free ports 80/443 if running..."
+echo "Stopping Apache to free ports 80/443 if running..."
 systemctl stop apache2 || true
 systemctl disable apache2 || true
 killall apache2 || true
 
-echo "📁 Creating web root directory..."
+echo "Creating web root directory..."
 mkdir -p "$WEB_ROOT"
 chown -R www-data:www-data "$WEB_ROOT"
 
-echo "🌐 Creating default index.html..."
+echo "Creating default index.html..."
 echo "<h1>Welcome to $DOMAIN</h1>" > "$WEB_ROOT/index.html"
 chown www-data:www-data "$WEB_ROOT/index.html"
 
-echo "🔐 Extracting and preparing SSL certificates from .p7b..."
-openssl pkcs7 -print_certs -in "$SSL_DIR/advertisement-telemetry_com.p7b" | \
+echo "Extracting and preparing SSL certificates from .p7b..."
+openssl pkcs7 -print_certs -in "$SSL_DIR/example_com.p7b" | \
 awk '/BEGIN/{c++} { print > "/tmp/fullchain-cert-" c ".pem" }'
 
 cat /tmp/fullchain-cert-*.pem > "$FULLCHAIN_PATH"
@@ -36,7 +45,7 @@ cp "$SSL_DIR/server.key" "$KEY_PATH"
 chmod 644 "$FULLCHAIN_PATH"
 chmod 600 "$KEY_PATH"
 
-echo "📝 Creating NGINX config for $DOMAIN..."
+echo "Creating NGINX config for $DOMAIN..."
 
 cat > "$NGINX_CONF" <<EOF
 server {
@@ -69,7 +78,7 @@ server {
 }
 EOF
 
-echo "📡 Enabling site and restarting NGINX..."
+echo "Enabling site and restarting NGINX..."
 
 rm -f /etc/nginx/sites-enabled/default
 ln -sf "$NGINX_CONF" /etc/nginx/sites-enabled/
@@ -77,4 +86,4 @@ ln -sf "$NGINX_CONF" /etc/nginx/sites-enabled/
 nginx -t
 systemctl restart nginx
 
-echo "✅ NGINX is installed and configured for $DOMAIN with TLS 1.3, X25519, and HTTP/2."
+echo "NGINX is installed and configured for $DOMAIN with TLS 1.3, X25519, and HTTP/2."
