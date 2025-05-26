@@ -11,6 +11,19 @@ import numpy as np
 import cv2
 from torchvision.transforms.functional import to_pil_image
 
+"""
+Data for training is organized as such:
+data/
+├── 01/
+│   ├── 01_123.jpg
+│   └── 01_456.jpg
+├── 02/
+│   ├── 02_789.jpg
+│   └── 02_321.jpg
+
+"""
+
+
 # Configuration
 DATA_DIR = "data"
 BATCH_SIZE = 16
