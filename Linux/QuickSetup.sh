@@ -37,7 +37,7 @@ sudo apt update -y && sudo apt upgrade -y || { echo 'Failed to update and upgrad
 
 
 # Install necessary packages
-sudo apt install -y zip curl tree python3-full python3-pip plocate snapd python3-venv tmux git-all htop uuid-runtime build-essential net-tools || { echo 'Failed to install packages'; exit 1; }
+sudo apt install -y zip curl tree python3-full python3-pip plocate snapd python3-venv tmux git-all htop uuid-runtime build-essential net-tools ffmpeg || { echo 'Failed to install packages'; exit 1; }
 
 sudo snap refresh 
 
