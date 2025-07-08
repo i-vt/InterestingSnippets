@@ -51,7 +51,7 @@ sudo dpkg -l 'linux-image-*' | \
   xargs sudo apt -y purge
 sudo apt autoremove -y
 sudo apt clean
-
+sudo snap refresh
 # Download and save the .vimrc file to the home directory
 wget https://raw.githubusercontent.com/i-vt/InterestingSnippets/refs/heads/main/Linux/.vimrc --output-document=$HOME/.vimrc || { echo 'Failed to download .vimrc'; exit 1; }
 
