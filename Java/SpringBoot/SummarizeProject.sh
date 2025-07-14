@@ -1,1 +1,1 @@
-clear; cat build.gradle > ../summary.txt; find ./src -type f ! -name "*.png" ! -name "*.jpeg" ! -name "*.jpg" -exec cat {} + >> ../summary.txt; tree . >> ../summary.txt; java --version >> ../summary.tx
+clear; cat build.gradle > ../summary.txt; find ./src -type f ! -name "*.png" ! -name "*.jpeg" ! -name "*.jpg" -exec cat {} + >> ../summary.txt; tree . >> ../summary.txt; java --version >> ../summary.txt
