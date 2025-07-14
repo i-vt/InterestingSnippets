@@ -79,6 +79,9 @@ for ALIAS in "${ALIASES[@]}"; do
   fi
 done
 
+# Set up missing folders
+mkdir ~/Desktop ~/Downloads ~/Documents ~/Music ~/Pictures ~/Videos ~/Trash
+
 # Source the updated file
 source "$BASHRC"
 
