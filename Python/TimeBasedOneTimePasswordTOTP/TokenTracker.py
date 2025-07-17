@@ -1,4 +1,4 @@
-from TOTP import *  
+from TimeBasedOneTimePasswordTOTP import *  
 import hashlib
 import datetime
 import os
