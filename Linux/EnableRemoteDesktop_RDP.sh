@@ -23,9 +23,24 @@ apt update
 echo "[+] Adding xrdp user to ssl-cert group..."
 adduser xrdp ssl-cert
 
+# Create a group for RDP users
+echo "[+] Creating 'rdpusers' group if it doesn't exist..."
+getent group rdpusers > /dev/null || groupadd rdpusers
+
+# Determine the non-root user (works even when run with sudo)
+USERNAME=${SUDO_USER:-$(logname)}
+
+echo "[+] Adding user '$USERNAME' to 'rdpusers' group..."
+usermod -aG rdpusers "$USERNAME"
+
+# Set up xsession for the user
 echo "[+] Setting xfce4-session for xrdp session..."
-echo "xfce4-session" > /home/$SUDO_USER/.xsession
-chown $SUDO_USER:$SUDO_USER /home/$SUDO_USER/.xsession
+echo "xfce4-session" > "/home/$USERNAME/.xsession"
+chown "$USERNAME:rdpusers" "/home/$USERNAME/.xsession"
+chmod 640 "/home/$USERNAME/.xsession"
+
+# Make home dir group-accessible (optional, can be skipped if sensitive)
+chmod g+rx "/home/$USERNAME"
 
 echo "[+] Restarting xrdp service..."
 systemctl restart xrdp
@@ -41,5 +56,5 @@ ufw --force enable
 
 echo "[+] Setup complete!"
 echo "Use an RDP client to connect to: $IP (port 3389)"
-echo "Login with your Linux username and password."
-
+echo "Login with your Linux username and password (make sure the user is in the 'rdpusers' group)."
+echo "Example: sudo usermod -aG rdpusers anotherus3r123"
