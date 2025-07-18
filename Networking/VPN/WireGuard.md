@@ -2,12 +2,22 @@
 
 ## Server Configs
 
-run angristan_wireguard-installer.sh, OG source: [here](https://github.com/angristan/wireguard-install/blob/master/wireguard-install.sh)
+1. Run angristan_wireguard-installer.sh, OG source: [here](https://github.com/angristan/wireguard-install/blob/master/wireguard-install.sh)
 
 ```
 bash <(curl -fsSL https://raw.githubusercontent.com/i-vt/InterestingSnippets/refs/heads/main/Networking/VPN/angristan_wireguard-installer.sh)
 ```
 
+2. It fucks up DNS resolution b/c it removes nameservers, so re-add them:
+
+```
+if ! grep -qE 'nameserver (8\.8\.8\.8|1\.1\.1\.1)' /etc/resolv.conf; then
+  echo "Neither 8.8.8.8 nor 1.1.1.1 found. Adding 8.8.8.8..."
+  echo "nameserver 8.8.8.8" | sudo tee -a /etc/resolv.conf > /dev/null
+else
+  echo "Nameserver already set correctly."
+fi
+```
 
 ## Client Configs
 
