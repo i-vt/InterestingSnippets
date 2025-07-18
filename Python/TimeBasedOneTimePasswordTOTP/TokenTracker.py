@@ -62,13 +62,18 @@ class TokenGenerator:
     def use_token(self, token: str) -> None:
         if not token:
             raise ValueError("token_used should not be empty")
+
         entry = "\n" + self.timestamp() + "|" + token
         with open(self.used_tokens_file, "a") as f:
             f.write(entry)
+
         with open(self.valid_tokens_file, "r") as f:
             tokens = f.read().splitlines()
+
+        tokens = [t for t in tokens if t.strip() != token]
+
         with open(self.valid_tokens_file, "w") as f:
-            f.write("\n".join(tokens[1:]) + "\n")
+            f.write("\n".join(tokens) + "\n")
 
     def remove_old_used_tokens(self) -> None:
         if not os.path.exists(self.used_tokens_file):
@@ -107,6 +112,7 @@ class TokenGenerator:
 
         with open(self.valid_tokens_file, "w") as f:
             f.write("\n".join(result) + "\n")
+            
         open(self.last_updated_tokens_file, "w").write(self.timestamp())
         return result
 
@@ -164,7 +170,7 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print(f"{APP_NAME} v{VERSION}")
         print("Usage:")
-        print("  python script.py get <secret>")
+        print("  python script.py generate <secret>")
         print("  python script.py getanduse")
         print("  python script.py getvalid")
         print("  python script.py use <token>")
