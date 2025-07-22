@@ -1,9 +1,10 @@
+https://trends.google.com/trending/rss?geo=US
 http://feeds.trendmicro.com/TrendMicroResearch
 https://any.run/cybersecurity-blog/feed/
 https://blog.itsecurityexpert.co.uk/feeds/posts/default?alt=atom
 https://cyberbuilders.substack.com/feed
 https://cyberhoot.com/category/blog/feed/
-https://levelblue.com/site/blog-all-rss
+# https://levelblue.com/site/blog-all-rss removed because has AI slop
 https://cyble.com/feed/
 https://dataprivacymanager.net/feed/
 https://erdalozkaya.com/feed/
@@ -13,7 +14,6 @@ https://feeds.feedburner.com/govtech/blogs/lohrmann_on_infrastructure
 https://feeds.feedburner.com/TheHackersNews?format=xml
 https://grahamcluley.com/feed/
 https://info-savvy.com/feed/
-https://internetsafetybrigade.org/our-blog/f.atom
 https://krebsonsecurity.com/feed/
 https://lab.wallarm.com/feed/
 https://lynxtechnologypartners.com/blog/feed/
@@ -24,7 +24,6 @@ https://securityaffairs.co/wordpress/feed
 https://socprime.com/feed/
 https://taosecurity.blogspot.com/feeds/posts/default?alt=rss
 https://thecybermaniacs.com/cm-blog/rss.xml
-https://truefort.com/feed/
 https://ventureinsecurity.net/feed
 https://wesecureapp.com/feed/
 https://www.acunetix.com/blog/feed/
@@ -52,5 +51,3 @@ https://www.seqrite.com/blog/feed
 https://www.techrepublic.com/rssfeeds/topic/security/?feedType=rssfeeds
 https://www.tripwire.com/state-of-security/feed/
 https://www.upguard.com/blog/rss.xml
-https://www.veracode.com/blog/feed
-https://www.webroot.com/blog/feed/
