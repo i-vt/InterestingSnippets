@@ -1,131 +1,118 @@
-//mkdir MyZipApp
-//cd MyZipApp
-//dotnet new console
-// vi Program.cs
-//dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
-///cp /home/usernamegohere/Downloads/MyZipApp/bin/Release/net7.0/win-x64/publish/MyZipApp.exe ../
-
 using System;
 using System.IO;
 using System.IO.Compression;
+using System.Security;
 
 class Program
 {
     static void Main(string[] args)
     {
-        // Ensure the user has provided a directory path as an argument
-        if (args.Length < 1)
+        if(args.Length < 2)
         {
-            Console.WriteLine("Please provide a directory path.");
+            Console.WriteLine("Usage: cliZIP.exe <sourcePath> <destinationZipPath>");
+            Console.WriteLine("  sourcePath can be a file or directory");
             return;
         }
-
-        string targetDirectory = args[0];
-
-        // Check if the provided directory exists
-        if (!Directory.Exists(targetDirectory))
+        
+        string sourcePath = args[0];
+        string destinationZip = args[1];
+        
+        if(!File.Exists(sourcePath) && !Directory.Exists(sourcePath))
         {
-            Console.WriteLine($"The directory {targetDirectory} does not exist.");
+            Console.WriteLine($"Error: Path '{sourcePath}' does not exist.");
             return;
         }
-
-        // Get all the subdirectories in the target directory
-        string[] directories = Directory.GetDirectories(targetDirectory);
-
-        // Check if there are any folders to zip
-        if (directories.Length == 0)
+        
+        try
         {
-            Console.WriteLine("No folders found to zip.");
-            return;
-        }
-
-        // Define the path for the output zip file
-        string zipFilePath = Path.Combine(targetDirectory, "FoldersArchive.zip");
-
-        // Create the zip archive
-        using (ZipArchive archive = ZipFile.Open(zipFilePath, ZipArchiveMode.Create))
-        {
-            foreach (string directory in directories)
+            using (FileStream zipToOpen = new FileStream(destinationZip, FileMode.Create))
             {
-                string folderName = Path.GetFileName(directory);
-                Console.WriteLine($"Adding folder: {folderName}");
-
-                try
+                using (ZipArchive archive = new ZipArchive(zipToOpen, ZipArchiveMode.Create))
                 {
-                    // Recursively add files from the folder to the archive
-                    AddFolderToZip(directory, archive, folderName);
-                }
-                catch (UnauthorizedAccessException ex)
-                {
-                    // Handle access denied issues and continue
-                    Console.WriteLine($"Error: Access denied to folder '{folderName}'. Skipping.");
-                }
-                catch (Exception ex)
-                {
-                    // Handle any other errors and continue
-                    Console.WriteLine($"Error: {ex.Message}. Skipping folder '{folderName}'.");
+                    if (File.Exists(sourcePath))
+                    {
+                        // Single file
+                        AddFileToArchive(archive, sourcePath, Path.GetFileName(sourcePath));
+                    }
+                    else if (Directory.Exists(sourcePath))
+                    {
+                        // Directory - add recursively
+                        AddDirectoryToArchive(archive, sourcePath, "");
+                    }
                 }
             }
+            Console.WriteLine($"Successfully compressed '{sourcePath}' to '{destinationZip}'!");
         }
-
-        Console.WriteLine($"All accessible folders have been zipped into: {zipFilePath}");
+        catch(Exception ex)
+        {
+            Console.WriteLine($"An error occurred creating the archive: {ex.Message}");
+        }
     }
-
-    // Helper method to recursively add a folder and its contents to the zip archive
-    static void AddFolderToZip(string folderPath, ZipArchive archive, string entryPath)
+    
+    static void AddDirectoryToArchive(ZipArchive archive, string directoryPath, string entryPrefix)
     {
         try
         {
-            // Get all files in the current folder
-            foreach (string filePath in Directory.GetFiles(folderPath))
+            // Add all files in current directory
+            foreach (string filePath in Directory.GetFiles(directoryPath))
             {
-                try
-                {
-                    // Add individual files to the zip archive
-                    string relativePath = Path.GetRelativePath(folderPath, filePath);
-                    string zipEntryPath = Path.Combine(entryPath, relativePath);
-                    archive.CreateEntryFromFile(filePath, zipEntryPath);
-                    Console.WriteLine($"Added file: {filePath}");
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    Console.WriteLine($"Warning: Access denied to file '{filePath}'. Skipping.");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error while zipping file '{filePath}': {ex.Message}. Skipping.");
-                }
+                string fileName = Path.GetFileName(filePath);
+                string entryName = string.IsNullOrEmpty(entryPrefix) ? fileName : $"{entryPrefix}/{fileName}";
+                AddFileToArchive(archive, filePath, entryName);
             }
-
-            // Get all subdirectories in the current folder and process them recursively
-            foreach (string subFolder in Directory.GetDirectories(folderPath))
+            
+            // Recursively add subdirectories
+            foreach (string subdirectory in Directory.GetDirectories(directoryPath))
             {
-                string subFolderName = Path.GetFileName(subFolder);
-                string newEntryPath = Path.Combine(entryPath, subFolderName);
-                
-                try
-                {
-                    // Recursively add subfolder contents
-                    AddFolderToZip(subFolder, archive, newEntryPath);
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    Console.WriteLine($"Warning: Access denied to folder '{subFolderName}'. Skipping.");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error while zipping folder '{subFolderName}': {ex.Message}. Skipping.");
-                }
+                string dirName = Path.GetFileName(subdirectory);
+                string newPrefix = string.IsNullOrEmpty(entryPrefix) ? dirName : $"{entryPrefix}/{dirName}";
+                AddDirectoryToArchive(archive, subdirectory, newPrefix);
             }
         }
         catch (UnauthorizedAccessException)
         {
-            // Handle access denied issues for the entire folder and continue processing files
-            Console.WriteLine($"Warning: Access denied to folder '{folderPath}'. Attempting to zip files inside.");
+            Console.WriteLine($"Warning: Access denied to directory '{directoryPath}' - skipping");
+        }
+        catch (SecurityException)
+        {
+            Console.WriteLine($"Warning: Security exception accessing directory '{directoryPath}' - skipping");
+        }
+        catch (DirectoryNotFoundException)
+        {
+            Console.WriteLine($"Warning: Directory '{directoryPath}' not found - skipping");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error while accessing folder '{folderPath}': {ex.Message}. Skipping this folder.");
+            Console.WriteLine($"Warning: Error accessing directory '{directoryPath}': {ex.Message} - skipping");
+        }
+    }
+    
+    static void AddFileToArchive(ZipArchive archive, string filePath, string entryName)
+    {
+        try
+        {
+            archive.CreateEntryFromFile(filePath, entryName);
+            Console.WriteLine($"Added: {entryName}");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Console.WriteLine($"Warning: Access denied to file '{filePath}' - skipping");
+        }
+        catch (SecurityException)
+        {
+            Console.WriteLine($"Warning: Security exception accessing file '{filePath}' - skipping");
+        }
+        catch (FileNotFoundException)
+        {
+            Console.WriteLine($"Warning: File '{filePath}' not found - skipping");
+        }
+        catch (IOException ex)
+        {
+            Console.WriteLine($"Warning: IO error with file '{filePath}': {ex.Message} - skipping");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Warning: Error adding file '{filePath}': {ex.Message} - skipping");
         }
     }
 }
