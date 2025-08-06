@@ -12,18 +12,18 @@ MYSQL_APT_DEB="mysql-apt-config_0.8.29-1_all.deb"
 
 echo "🔧 Installing MySQL Server via MySQL APT Repository..."
 
-# Step 1: Download the MySQL APT config package
+# Step 1: Download the MySQL APT config package if not already present
 if [ ! -f "$MYSQL_APT_DEB" ]; then
     wget https://dev.mysql.com/get/$MYSQL_APT_DEB
 fi
 
-# Step 2: Install the MySQL APT config package (non-interactive)
+# Step 2: Install the APT config (non-interactive)
 sudo DEBIAN_FRONTEND=noninteractive dpkg -i $MYSQL_APT_DEB
 
-# Step 3: Update APT package list
+# Step 3: Update package list
 sudo apt-get update
 
-# Step 4: Install MySQL Server non-interactively
+# Step 4: Install MySQL Server
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server
 
 echo "🚀 Starting MySQL service..."
@@ -31,10 +31,14 @@ sudo systemctl start mysql
 
 echo "🔒 Securing MySQL (non-interactive)..."
 sudo mysql <<EOF
+-- Switch to password authentication for root
 ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '${MYSQL_SUPERPASS}';
+
+-- Remove anonymous users and test DB
 DELETE FROM mysql.user WHERE User='';
 DROP DATABASE IF EXISTS test;
 DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
+
 FLUSH PRIVILEGES;
 EOF
 
