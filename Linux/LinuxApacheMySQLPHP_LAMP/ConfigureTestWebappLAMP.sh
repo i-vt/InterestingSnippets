@@ -107,3 +107,4 @@ echo "📊 Load test complete! Monitor your server with 'top' or 'htop'."
 # END
 # -----------------------------
 echo "🏁 App deployment and testing complete!"
+echo "Visit: http://<server>/index.php"
