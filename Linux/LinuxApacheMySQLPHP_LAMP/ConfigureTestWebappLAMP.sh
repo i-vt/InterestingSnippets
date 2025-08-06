@@ -53,7 +53,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $stmt->bind_param("ss", $title, $content);
         $stmt->execute();
         $stmt->close();
-        header("Location: /index.php"); // ✅ Explicit redirect to index.php
+        header("Location: /index.php"); // Redirect to index.php
         exit;
     } else {
         die("Prepare failed: " . $mysqli->error);
@@ -81,6 +81,15 @@ $result = $mysqli->query("SELECT * FROM posts ORDER BY created_at DESC");
     <hr>
 <?php endwhile; ?>
 EOF
+
+# -----------------------------
+# APACHE CONFIG FIX
+# -----------------------------
+echo "🧹 Removing index.html if it exists..."
+sudo rm -f ${APP_DIR}/index.html
+
+echo "⚙️ Prioritizing index.php in Apache config..."
+sudo sed -i 's/DirectoryIndex .*/DirectoryIndex index.php index.html index.cgi index.pl index.xhtml index.htm/' /etc/apache2/mods-enabled/dir.conf
 
 # -----------------------------
 # PERMISSIONS & RESTART
