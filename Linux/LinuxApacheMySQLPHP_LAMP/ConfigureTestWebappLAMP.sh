@@ -8,7 +8,7 @@ DB_NAME="sample_app"
 DB_USER="superuser"
 DB_PASS="StrongPassword123!"
 APP_DIR="/var/www/html"
-TEST_URL="http://localhost/"
+TEST_URL="http://localhost/index.php"
 
 # -----------------------------
 # DATABASE SETUP
@@ -53,7 +53,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $stmt->bind_param("ss", $title, $content);
         $stmt->execute();
         $stmt->close();
-        header("Location: /");
+        header("Location: /index.php"); // ✅ Explicit redirect to index.php
         exit;
     } else {
         die("Prepare failed: " . $mysqli->error);
