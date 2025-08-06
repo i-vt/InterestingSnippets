@@ -1,5 +1,4 @@
 #!/bin/bash
-
 set -e
 
 # -----------------------
@@ -9,10 +8,23 @@ MYSQL_SUPERUSER="superuser"
 MYSQL_SUPERPASS="StrongPassword123!"
 BIND_ADDRESS="0.0.0.0"
 MYSQL_CONF_FILE="/etc/mysql/mysql.conf.d/mysqld.cnf"
+MYSQL_APT_DEB="mysql-apt-config_0.8.29-1_all.deb"
 
-echo "🔧 Installing MySQL Server..."
-sudo apt update
-sudo DEBIAN_FRONTEND=noninteractive apt install -y mysql-server
+echo "🔧 Installing MySQL Server via MySQL APT Repository..."
+
+# Step 1: Download the MySQL APT config package
+if [ ! -f "$MYSQL_APT_DEB" ]; then
+    wget https://dev.mysql.com/get/$MYSQL_APT_DEB
+fi
+
+# Step 2: Install the MySQL APT config package (non-interactive)
+sudo DEBIAN_FRONTEND=noninteractive dpkg -i $MYSQL_APT_DEB
+
+# Step 3: Update APT package list
+sudo apt-get update
+
+# Step 4: Install MySQL Server non-interactively
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server
 
 echo "🚀 Starting MySQL service..."
 sudo systemctl start mysql
