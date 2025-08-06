@@ -5,6 +5,7 @@ MYSQL_SUPERUSER="superuser"
 MYSQL_SUPERPASS="StrongPassword123!"
 BIND_ADDRESS="0.0.0.0"
 MYSQL_CONF_FILE="/etc/mysql/mysql.conf.d/mysqld.cnf"
+MYSQL_APT_DEB="mysql-apt-config_0.8.29-1_all.deb"
 
 echo "🧹 Completely removing existing MySQL installation..."
 sudo systemctl stop mysql || true
@@ -12,16 +13,16 @@ sudo apt-get remove --purge -y mysql-server mysql-client mysql-common mysql-serv
 sudo apt-get autoremove -y
 sudo apt-get autoclean
 
-echo "🗑️ Removing MySQL data directories..."
-sudo rm -rf /var/lib/mysql
-sudo rm -rf /var/log/mysql
-sudo rm -rf /etc/mysql
+echo "🗑️ Removing MySQL data and config directories..."
+sudo rm -rf /var/lib/mysql /var/log/mysql /etc/mysql
 
-echo "📦 Installing MySQL with preset root password..."
-sudo debconf-set-selections <<< "mysql-server mysql-server/root_password password ${MYSQL_SUPERPASS}"
-sudo debconf-set-selections <<< "mysql-server mysql-server/root_password_again password ${MYSQL_SUPERPASS}"
+echo "🔧 Installing MySQL APT Repository package..."
+if [ ! -f "$MYSQL_APT_DEB" ]; then
+    wget https://dev.mysql.com/get/$MYSQL_APT_DEB
+fi
+sudo DEBIAN_FRONTEND=noninteractive dpkg -i $MYSQL_APT_DEB
 
-echo "🔧 Installing MySQL Server..."
+echo "📦 Installing MySQL Server..."
 sudo apt-get update
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server
 
@@ -29,7 +30,16 @@ echo "🚀 Starting MySQL service..."
 sudo systemctl start mysql
 sudo systemctl enable mysql
 
-echo "🔒 Securing MySQL installation..."
+echo "🔒 Securing MySQL root account..."
+AUTH_METHOD=$(sudo mysql -e "SELECT plugin FROM mysql.user WHERE User='root' AND Host='localhost';" --skip-column-names 2>/dev/null || echo "unknown")
+
+if [[ "$AUTH_METHOD" == "auth_socket" ]] || [[ "$AUTH_METHOD" == "" ]]; then
+    echo "Root user uses auth_socket or no plugin; switching to mysql_native_password..."
+    sudo mysql <<EOF
+ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '${MYSQL_SUPERPASS}';
+EOF
+fi
+
 mysql -uroot -p${MYSQL_SUPERPASS} <<EOF
 DELETE FROM mysql.user WHERE User='';
 DROP DATABASE IF EXISTS test;
@@ -45,7 +55,7 @@ FLUSH PRIVILEGES;
 EOF
 
 echo "🌐 Configuring MySQL to allow remote access..."
-sudo mkdir -p /etc/mysql/mysql.conf.d/
+sudo mkdir -p "$(dirname "$MYSQL_CONF_FILE")"
 if grep -q "^bind-address" "$MYSQL_CONF_FILE" 2>/dev/null; then
   sudo sed -i "s/^bind-address.*/bind-address = ${BIND_ADDRESS}/" "$MYSQL_CONF_FILE"
 else
@@ -61,6 +71,7 @@ if sudo ufw status | grep -q "Status: active"; then
 fi
 
 echo "✅ MySQL setup complete!"
+echo ""
 echo "🔑 Superuser credentials:"
 echo "    Username: ${MYSQL_SUPERUSER}"
 echo "    Password: ${MYSQL_SUPERPASS}"
