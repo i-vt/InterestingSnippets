@@ -30,12 +30,17 @@ Edit settings postgreesql.conf
 ```
 sudo vi /etc/postgresql/<version>/main/postgresql.conf
 ```
+
 Change line to uncommented and replace localhost with a star or something more specific
-```listen_addresses = '*'```
+```
+listen_addresses = '*'
+```
+
 Edit settings pg_hba.conf
 ```
 sudo vi /etc/postgresql/<version>/main/pg_hba.conf
 ```
+
 Modify the host configs, (split them with a tab
 ```
 host    all             all             <IP>/32            md5
@@ -56,6 +61,11 @@ sudo ufw reload
 Reboot the server (b/c sometimes restarting services doesn't do the job fully:
 ```
 sudo shutdown -r now
+```
+
+Test it 
+``
+psql -h 192.168.56.101 -p 5432 -U superuser -d postgres
 ```
 
 # PG Admin (PSQL GUI)
