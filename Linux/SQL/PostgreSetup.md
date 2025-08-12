@@ -64,7 +64,7 @@ sudo shutdown -r now
 ```
 
 Test it 
-``
+```
 psql -h 192.168.56.101 -p 5432 -U superuser -d postgres
 ```
 
