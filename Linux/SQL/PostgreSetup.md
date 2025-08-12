@@ -41,6 +41,12 @@ Modify the host configs, (split them with a tab
 host    all             all             <IP>/32            md5
 ```
 
+Samples:
+- `0.0.0.0/0` is for anywhere
+- `192.168.56.0/24` is for the same subnet
+- `192.168.56.2/32` is for 1 IP
+
+
 Modify UFW rules:
 ```
 sudo ufw allow 5432/tcp
