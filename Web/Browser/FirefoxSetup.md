@@ -28,3 +28,25 @@ Right click on the `Overflow Menu` panel `Account` <img width="55" height="50" a
 , then click <img width="244" height="43" alt="image" src="https://github.com/user-attachments/assets/ebb01f92-6405-4380-a3aa-ca3a1bfbc390" />
 
 ## Settings
+Click on hamburger menu <img width="61" height="64" alt="image" src="https://github.com/user-attachments/assets/86ed5b05-4fa3-44dc-bea1-cd30117cfaf1" /> 
+
+<img width="441" height="1037" alt="image" src="https://github.com/user-attachments/assets/a5e1e5a9-a7d3-4388-b061-cc2ae9c5300a" />
+
+
+Click on `Settings` <img width="127" height="73" alt="image" src="https://github.com/user-attachments/assets/b0e120c4-afe3-4d15-9b3a-00a40f739513" />
+
+
+### General
+<img width="312" height="130" alt="image" src="https://github.com/user-attachments/assets/b547364f-8bf1-415a-821a-6dab57844e3f" />
+
+#### Change the color theme
+
+<img width="921" height="480" alt="image" src="https://github.com/user-attachments/assets/c583036e-ff06-4215-9fd8-a35ed10a756a" />
+
+### Home
+
+<img width="204" height="72" alt="image" src="https://github.com/user-attachments/assets/574fca55-6e5d-43c1-a82a-1eb519d698ab" />
+
+#### Firefox Content
+
+<img width="888" height="805" alt="image" src="https://github.com/user-attachments/assets/af80d013-aa49-49d4-8af4-266c8c7e27e3" />
