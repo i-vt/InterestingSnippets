@@ -3,6 +3,10 @@
 ## Clean up visual UI in Overflow Menu
 <img width="1878" height="134" alt="image" src="https://github.com/user-attachments/assets/75205229-9872-4a7e-8e9b-23fbbdb7959d" />
 
+
+
+---------------
+
 ### View recent browsing across windows and devices
 Right click on the `Overflow Menu` panel `View recent browsing across windows and devices` <img width="46" height="55" alt="image" src="https://github.com/user-attachments/assets/9c677360-73b8-49ad-8e9d-effac3d951ca" />
 , then click `Remove from Toolbar`
