@@ -10,6 +10,17 @@ Right click on the `Overflow Menu` panel `View recent browsing across windows an
 
 <img width="344" height="287" alt="image" src="https://github.com/user-attachments/assets/64807fe4-8e1b-4e67-8f6f-53ba6b5297ec" />
 
+
+---------------
+
 ### Pocket
-Right click on the `Overflow Menu` panel <img width="69" height="63" alt="image" src="https://github.com/user-attachments/assets/5fcb489d-af92-408a-bcb1-b018def8bf49" />
+Right click on the `Overflow Menu` panel `Pocket` <img width="69" height="63" alt="image" src="https://github.com/user-attachments/assets/5fcb489d-af92-408a-bcb1-b018def8bf49" />
 , then click <img width="244" height="43" alt="image" src="https://github.com/user-attachments/assets/ebb01f92-6405-4380-a3aa-ca3a1bfbc390" />
+
+---------------
+
+### Account
+Right click on the `Overflow Menu` panel `Account` <img width="244" height="43" alt="image" src="https://github.com/user-attachments/assets/be586733-0150-443b-b510-84bdcbe2c841" />
+, then click <img width="244" height="43" alt="image" src="https://github.com/user-attachments/assets/ebb01f92-6405-4380-a3aa-ca3a1bfbc390" />
+
+## Settings
