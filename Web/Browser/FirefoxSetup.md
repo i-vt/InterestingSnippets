@@ -83,10 +83,10 @@ At the top right corner click on the `Extensions` <img width="79" height="56" al
 ### uBlock Origin
 Get `uBlock Origin`
 
-- <img width="1036" height="182" alt="image" src="https://github.com/user-attachments/assets/507c7441-9d84-4752-9617-76b9a4fdbf4d" />
-- <img width="334" height="117" alt="image" src="https://github.com/user-attachments/assets/34ad5b3c-c38e-4301-815b-25fea8660b29" />
-- <img width="464" height="137" alt="image" src="https://github.com/user-attachments/assets/a21ed480-c3e2-4ad7-bcb1-864c84bbd5af" />
-- <img width="118" height="76" alt="image" src="https://github.com/user-attachments/assets/52d6fb5c-5b60-4785-b7bf-9580dd9aab8f" />
+1. <img width="1036" height="182" alt="image" src="https://github.com/user-attachments/assets/507c7441-9d84-4752-9617-76b9a4fdbf4d" />
+2. <img width="334" height="117" alt="image" src="https://github.com/user-attachments/assets/34ad5b3c-c38e-4301-815b-25fea8660b29" />
+3. <img width="464" height="137" alt="image" src="https://github.com/user-attachments/assets/a21ed480-c3e2-4ad7-bcb1-864c84bbd5af" />
+4. <img width="118" height="76" alt="image" src="https://github.com/user-attachments/assets/52d6fb5c-5b60-4785-b7bf-9580dd9aab8f" />
 
 
 
