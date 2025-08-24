@@ -24,7 +24,7 @@ Right click on the `Overflow Menu` panel `Pocket` <img width="69" height="63" al
 ---------------
 
 ### Account
-Right click on the `Overflow Menu` panel `Account` <img width="244" height="43" alt="image" src="https://github.com/user-attachments/assets/be586733-0150-443b-b510-84bdcbe2c841" />
+Right click on the `Overflow Menu` panel `Account` <img width="55" height="50" alt="image" src="https://github.com/user-attachments/assets/ab7be62a-c14e-4de6-bd26-a5cd733d3627" />
 , then click <img width="244" height="43" alt="image" src="https://github.com/user-attachments/assets/ebb01f92-6405-4380-a3aa-ca3a1bfbc390" />
 
 ## Settings
