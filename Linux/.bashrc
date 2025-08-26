@@ -43,6 +43,7 @@ alias s2021='python3 -m http.server 2021'
 alias s2022='python3 -m http.server 2022'
 alias wgup='wg-quick up /etc/wireguard/wg0.conf'
 alias wgdown='wg-quick down /etc/wireguard/wg0.conf'
+alias ports='ss -tulnp'
 
 # Default editor
 export EDITOR=vi
