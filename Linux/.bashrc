@@ -25,7 +25,7 @@ __ps1_build() {
   local who_part="${uh_color}\u${RESET}@${YELLOW}\h${RESET}"
 
   # Directory always bright yellow
-  local path_line="> ${TAB}${TAB}${BRIGHT_YELLOW}[[ ${PWD} ]]${RESET}"
+  local path_line="> ${TAB}${BRIGHT_YELLOW}[[ ${PWD} ]]${RESET}"
 
   PS1="\n${path_line}\n> ${time_part} ${who_part} : "
 }
