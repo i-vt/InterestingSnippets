@@ -1,96 +1,81 @@
-# If not running interactively, don't do anything
-case $- in
-    *i*) ;;
-      *) return;;
-esac
-
-# don't put duplicate lines or lines starting with space in the history.
-# See bash(1) for more options
-HISTCONTROL=ignoreboth
-
-# append to the history file, don't overwrite it
-shopt -s histappend
-
-# for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
-HISTSIZE=10000
-HISTFILESIZE=20000
-
-# check the window size after each command and, if necessary,
-# update the values of LINES and COLUMNS.
-shopt -s checkwinsize
-
-# If set, the pattern "**" used in a pathname expansion context will
-# match all files and zero or more directories and subdirectories.
-#shopt -s globstar
-
-# make less more friendly for non-text input files, see lesspipe(1)
-#[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
-
-# set variable identifying the chroot you work in (used in the prompt below)
-if [ -z "${debian_chroot:-}" ] && [ -r /etc/debian_chroot ]; then
-    debian_chroot=$(cat /etc/debian_chroot)
-fi
-
-# Alias definitions.
-# You may want to put all your additions into a separate file like
-# ~/.bash_aliases, instead of adding them here directly.
-# See /usr/share/doc/bash-doc/examples in the bash-doc package.
-
-if [ -f ~/.bash_aliases ]; then
-    . ~/.bash_aliases
-fi
-
-# enable programmable completion features (you don't need to enable
-# this, if it's already enabled in /etc/bash.bashrc and /etc/profile
-# sources /etc/bash.bashrc).
-if ! shopt -oq posix; then
-  if [ -f /usr/share/bash-completion/bash_completion ]; then
-    . /usr/share/bash-completion/bash_completion
-  elif [ -f /etc/bash_completion ]; then
-    . /etc/bash_completion
-  fi
-fi
-
-# Color escapes (wrapped in \[ \] so bash counts prompt width correctly)
+# ── Color helpers ──────────────────────────────────────────────────────────────
 RESET="\[\033[0m\]"
-BRIGHT_YELLOW="\[\033[93m\]"  # neon yellow
+BOLD="\[\033[1m\]"
+DIM="\[\033[2m\]"
 
-GREEN="\[\033[32m\]"   # user color
-YELLOW="\[\033[33m\]"  # host color
-BLUE="\[\033[34m\]"
-RED="\[\033[31m\]"
+_supports_truecolor=0
+if [[ "${COLORTERM:-}" =~ (truecolor|24bit) ]]; then _supports_truecolor=1; fi
 
-# __pc_newline
-__pc_newline() {
-  __prompt_newline_ready=1
+mkfg() {
+  if (( _supports_truecolor )); then
+    printf '\[\033[38;2;%s%sm\]' "$1" ""
+  else
+    printf '\[\033[38;5;%sm\]' "$2"
+  fi
 }
 
-# __ps1_build
-# Two-line prompt:
-# (blank) -> "    " x2 + [[ <abs $PWD> ]]
-# then [time] user@host :
+FG_TIME=$(mkfg "255;180;100" 215)     # warm soft orange (readable on dark bg)
+FG_USER=$(mkfg "57;255;20" 46)        # neon green (bright, high contrast)
+FG_HOST=$(mkfg "255;150;90" 209)      # softer orange for host
+FG_PATH=$(mkfg "140;255;120" 119)     # slightly softer neon green for paths
+FG_ARROW=$(mkfg "220;220;220" 252)    # light gray arrows (visible but not loud)
+FG_ERR=$(mkfg "255;95;95" 203)        # warm red for errors
+FG_OK=$(mkfg "57;255;20" 46)          # neon green OK
+FG_HINT=$(mkfg "200;200;180" 250)     # lighter beige-gray for hints
+FG_ROOT=$(mkfg "255;120;100" 196)     # strong warm orange/red for root user
+BRIGHT_YELLOW=$(mkfg "255;230;120" 228) # accent highlight (not overused)
+
+
+# ── Prompt newline hook ───────────────────────────────────────────────────────
+__pc_newline() { __prompt_newline_ready=1; }
+
+# ── Prompt builder (two lines) ────────────────────────────────────────────────
 __ps1_build() {
-  local uh_color="$GREEN"
-  [[ $EUID -eq 0 ]] && uh_color="$YELLOW"
+  local uh_user_color="$FG_USER"
+  [[ $EUID -eq 0 ]] && uh_user_color="$FG_ROOT"
 
   local TAB="    "
-  local time_part="${BLUE}[\t]${RESET}"
-  local who_part="${uh_color}\u${RESET}@${YELLOW}\h${RESET}"
+  local path_line="${FG_ARROW}>${RESET} ${TAB}${FG_PATH}[[ ${PWD} ]]${RESET}"
+  local time_part="${FG_TIME}[\\t]${RESET}"
+  local who_part="${uh_user_color}\\u${RESET}${FG_HINT}@${RESET}${FG_HOST}\\h${RESET}"
 
-  # Directory always bright yellow
-  local path_line="> ${TAB}${BRIGHT_YELLOW}[[ ${PWD} ]]${RESET}"
-
-  PS1="\n${path_line}\n> ${time_part} ${who_part} : "
+  PS1="\n${path_line}\n${FG_ARROW}>${RESET} ${time_part} ${who_part} : "
 }
 
-# PROMPT_COMMAND wiring
+# ── History: configuration ────────────────────────────────────────────────────
+export HISTFILE="${HISTFILE:-$HOME/.bash_history}"
+export HISTSIZE=100000          # in-memory lines
+export HISTFILESIZE=200000      # on-disk lines
+export HISTCONTROL=ignoredups:erasedups:ignorespace
+export HISTTIMEFORMAT='%F %T  ' # "YYYY-MM-DD HH:MM:SS  <cmd>"
+
+# Ignore noisy commands
+export HISTIGNORE='ls:ls *:ll:la:cd:pwd:clear:history:exit:bg:fg:jobs'
+
+# Append to the history file and store multi-line entries
+shopt -s histappend
+shopt -s cmdhist
+shopt -s lithist
+
+# ── History: share across concurrent shells ───────────────────────────────────
+__hist_share() {
+  builtin history -a           # append this session's new line
+  builtin history -c           # clear current in-memory history
+  builtin history -r           # reread merged history from disk
+}
+
+# ── PROMPT_COMMAND wiring (array-safe) ────────────────────────────────────────
 if declare -p PROMPT_COMMAND &>/dev/null && [[ $(declare -p PROMPT_COMMAND 2>/dev/null) == "declare -a"* ]]; then
-  PROMPT_COMMAND=(__pc_newline "${PROMPT_COMMAND[@]}" __ps1_build)
+  PROMPT_COMMAND=(__pc_newline __hist_share "${PROMPT_COMMAND[@]}" __ps1_build)
 else
-  PROMPT_COMMAND="__pc_newline${PROMPT_COMMAND:+; $PROMPT_COMMAND}; __ps1_build"
+  PROMPT_COMMAND="__pc_newline; __hist_share${PROMPT_COMMAND:+; $PROMPT_COMMAND}; __ps1_build"
 fi
 
-# Aliases
+# ── Handy status colors for scripts (optional) ────────────────────────────────
+export PS_OK="${FG_OK}[ok]${RESET}"
+export PS_ERR="${FG_ERR}[err]${RESET}"
+
+# ── Aliases (yours) ───────────────────────────────────────────────────────────
 alias s2020='python3 -m http.server 2020'
 alias s2021='python3 -m http.server 2021'
 alias s2022='python3 -m http.server 2022'
@@ -98,6 +83,36 @@ alias wgup='wg-quick up /etc/wireguard/wg0.conf'
 alias wgdown='wg-quick down /etc/wireguard/wg0.conf'
 alias ports='ss -tulnp'
 
-# Default editor
+# ── Default editor ────────────────────────────────────────────────────────────
 export EDITOR=vi
 export VISUAL=vi
+
+
+# ── Extras from your old config ───────────────────────────────────────────────
+# If not running interactively, don't do anything
+case $- in
+    *i*) ;;
+      *) return;;
+esac
+
+# check the window size after each command
+shopt -s checkwinsize
+
+# set variable identifying the chroot (used in the prompt if desired)
+if [ -z "${debian_chroot:-}" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+
+# Load aliases if ~/.bash_aliases exists
+if [ -f ~/.bash_aliases ]; then
+    . ~/.bash_aliases
+fi
+
+# Enable programmable completion features
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+  fi
+fi
