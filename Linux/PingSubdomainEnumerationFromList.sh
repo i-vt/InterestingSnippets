@@ -16,8 +16,12 @@ fi
 ping_subdomain() {
   local subdomain=$1
   local value1="$subdomain$host1"
+
   if ping -c 1 "$value1" > /dev/null 2>&1; then
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $value1" >> "$log_file"
+    # Resolve IP address (first one returned)
+    ip=$(getent hosts "$value1" | awk '{print $1}' | head -n 1)
+
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $value1 | $ip" >> "$log_file"
   fi
 }
 
