@@ -53,8 +53,8 @@ check_root() {
 detect_os() {
     if [[ -f /etc/os-release ]]; then
         . /etc/os-release
-        OS=$ID
-        OS_VERSION=$VERSION_ID
+        OS=${ID:-unknown}
+        OS_VERSION=${VERSION_ID:-unknown}
     else
         print_error "Cannot detect OS. This script requires Debian or Ubuntu."
         exit 1
