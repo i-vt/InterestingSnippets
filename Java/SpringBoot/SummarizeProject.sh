@@ -4,7 +4,7 @@ clear; {
   echo
   echo "===== Source Files ====="
   find ./src -type f \
-    ! -iname "*.png" ! -iname "*.jpeg" ! -iname "*.jpg" \
+    ! -iname "*.png" ! -iname "*.jpeg" ! -iname "*.jpg"  ! -iname "*.ico" \
     ! -iname "*.gif" ! -iname "*.class" ! -iname "*.wav" ! -iname "*.mp3" \
     -print0 | sort -z | while IFS= read -r -d '' file; do
       echo "# $file"
