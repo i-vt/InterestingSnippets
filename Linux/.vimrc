@@ -15,7 +15,6 @@ set showcmd                " Show partial commands
 set showmatch              " Highlight matching brackets
 set wildmenu               " Tab-complete commands in status line
 set laststatus=2           " Always show status line
-syntax on                  " Enable syntax highlighting
 
 " -------------------------
 " Tabs & Indentation
