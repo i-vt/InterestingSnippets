@@ -60,4 +60,4 @@ set sidescrolloff=5        " Same for horizontal scroll
 " Visual Tweaks
 " -------------------------
 set termguicolors          " True color support
-set colorcolumn=80         " Highlight column 80 for code style
+set colorcolumn=100        " Highlight column 80 for code style
