@@ -73,8 +73,14 @@ app.delete("/delete/:room/:fileId", (req, res) => {
   res.sendStatus(200);
 });
 
-// ---- Serve client ----
-app.get("/", (_, res) => {
+// ---- Redirect index to a random room ----
+app.get("/", (req, res) => {
+  const roomId = Math.random().toString(36).substring(2, 8);
+  res.redirect("/room?room=" + roomId);
+});
+
+// ---- Serve client page ----
+app.get("/room", (_, res) => {
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.end(`<!doctype html>
 <html>
@@ -101,7 +107,10 @@ body {
 header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 8px 16px; border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
 }
+header .left { display: flex; align-items: center; gap: 12px; }
+header .right { display: flex; align-items: center; gap: 8px; }
 main { padding: 16px; }
 textarea {
   width: 100%; height: 40vh;
@@ -111,7 +120,7 @@ textarea {
 }
 #fileList { list-style: none; padding: 0; margin-top: 10px; }
 #fileList li { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); padding: 4px 0; }
-button { padding: 4px 8px; cursor: pointer; border-radius: 6px; }
+button { padding: 4px 8px; cursor: pointer; border-radius: 6px; border: 1px solid var(--border); background: var(--bg2); color: inherit; }
 input[type=file] { display: none; }
 label.upload-btn {
   border: 1px solid var(--border);
@@ -135,12 +144,24 @@ body.dark {
   padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border);
   background: transparent;
 }
+input#roomCode {
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: inherit;
+}
 </style>
 </head>
 <body>
   <header>
-    <div>📝 Live Shared Text & Files</div>
-    <div style="display:flex; align-items:center; gap:8px;">
+    <div class="left">
+      <strong>📝 Live Shared Text & Files</strong>
+      <button id="newRoomBtn">➕ New Room</button>
+      <input id="roomCode" placeholder="Room code" maxlength="8">
+      <button id="joinRoomBtn">➡️ Join</button>
+    </div>
+    <div class="right">
       <label class="upload-btn" for="fileInput">📤 Upload File</label>
       <input id="fileInput" type="file">
       <button id="themeBtn" class="theme-toggle">🌙 Dark</button>
@@ -155,11 +176,26 @@ body.dark {
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-const room = new URLSearchParams(location.search).get("room") || "main";
+const params = new URLSearchParams(location.search);
+const room = params.get("room") || "main";
 const editor = document.getElementById("editor");
 const fileInput = document.getElementById("fileInput");
 const fileList = document.getElementById("fileList");
 const themeBtn = document.getElementById("themeBtn");
+const newRoomBtn = document.getElementById("newRoomBtn");
+const joinRoomBtn = document.getElementById("joinRoomBtn");
+const roomCodeInput = document.getElementById("roomCode");
+
+// --- Room Controls ---
+newRoomBtn.onclick = () => {
+  const id = Math.random().toString(36).substring(2, 8);
+  location.href = "/room?room=" + id;
+};
+
+joinRoomBtn.onclick = () => {
+  const code = roomCodeInput.value.trim();
+  if (code) location.href = "/room?room=" + code;
+};
 
 // --- Socket ---
 const socket = io({ transports: ["websocket", "polling"] });
@@ -248,4 +284,7 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log("Server running at http://localhost:" + PORT));
+server.listen(PORT, () =>
+  console.log("Server running at http://localhost:" + PORT)
+);
+
