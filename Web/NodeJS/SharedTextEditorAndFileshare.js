@@ -3,7 +3,6 @@
 // node SharedTextEditorAndFileshare.js
 
 // Live shared text + file upload/delete + dark/light theme with cookie preference
-// Run: npm init -y && npm i express socket.io multer && node server.js
 
 const express = require("express");
 const http = require("http");
