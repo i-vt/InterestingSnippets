@@ -82,6 +82,9 @@ done
 # Set up missing folders
 mkdir ~/Desktop ~/Downloads ~/Documents ~/Music ~/Pictures ~/Videos ~/Trash
 
+# Copy this repo to documents
+git clone https://github.com/i-vt/InterestingSnippets.git ~/Documents
+
 # Source the updated file
 source "$BASHRC"
 
