@@ -1,4 +1,7 @@
-// SharedVideoPlayer.js
+// npm init -y
+// npm i express socket.io multer
+// node SharedVideoPlayer.js
+
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
