@@ -397,6 +397,84 @@ input[type="file"] {
 .chat-section { width:320px; background:#0f0f11; border-left:1px solid rgba(255, 255, 255, 0.1); display:flex; flex-direction:column; }
 video { width:100%; max-width:900px; border-radius:12px; background:#000; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6); }
 
+.player-controls {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+}
+
+.speed-label {
+  font-size: 13px;
+  color: #a1a1aa;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.speed-slider {
+  width: 180px;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.speed-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+  transition: all 0.2s ease;
+}
+
+.speed-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.6);
+}
+
+.speed-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+  transition: all 0.2s ease;
+}
+
+.speed-slider::-moz-range-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.6);
+}
+
+.speed-value {
+  font-size: 14px;
+  color: #3b82f6;
+  font-weight: 600;
+  min-width: 45px;
+  text-align: center;
+}
+
 #unmuteBtn { 
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); 
   color: white;
@@ -534,8 +612,8 @@ video { width:100%; max-width:900px; border-radius:12px; background:#000; box-sh
       <div class="brand">
         <div class="logo">🎬</div>
         <div class="brand-text">
-          <h1 class="brand-title">StreamSync</h1>
-          <div class="brand-subtitle">Enterprise Video Platform</div>
+          <h1 class="brand-title">WatchVideosTogether.js</h1>
+          <div class="brand-subtitle">Made With Love <3</div>
         </div>
       </div>
       <div class="room-info">
@@ -581,7 +659,14 @@ video { width:100%; max-width:900px; border-radius:12px; background:#000; box-sh
 <div class="main-content">
   <div class="video-section">
     <video id="player" controls muted></video>
-    <button id="unmuteBtn">🔇 Click to Enable Sound</button>
+    <div class="player-controls">
+      <button id="unmuteBtn">🔇 Click to Enable Sound</button>
+      <div class="speed-control">
+        <span class="speed-label">⚡ Speed:</span>
+        <input type="range" id="speedSlider" class="speed-slider" min="0.25" max="3" step="0.25" value="1">
+        <span class="speed-value" id="speedValue">1×</span>
+      </div>
+    </div>
   </div>
   <div class="chat-section">
     <div class="chat-header">💬 Live Chat</div>
@@ -609,6 +694,8 @@ const unmuteBtn = document.getElementById("unmuteBtn");
 const chatInput = document.getElementById("chatInput");
 const sendBtn = document.getElementById("sendBtn");
 const chatMessages = document.getElementById("chatMessages");
+const speedSlider = document.getElementById("speedSlider");
+const speedValue = document.getElementById("speedValue");
 
 let ignore = false;
 let currentSource = "";
@@ -617,6 +704,16 @@ let isSeeking = false;
 
 // Username is provided by server
 const myUsername = "${username}";
+
+// Speed control functionality
+speedSlider.addEventListener('input', (e) => {
+  const speed = parseFloat(e.target.value);
+  speedValue.textContent = speed + '×';
+  if (!ignore) {
+    player.playbackRate = speed;
+    socket.emit("video:speed", { room, speed });
+  }
+});
 
 // Update file input label when file is selected
 uploadInput.onchange = (e) => {
@@ -640,6 +737,14 @@ player.onvolumechange = () => {
 socket.emit("join", { room, username: myUsername });
 socket.on("video:state", applyState);
 socket.on("video:update", applyState);
+socket.on("video:speed", (data) => {
+  if (!data || ignore) return;
+  ignore = true;
+  player.playbackRate = data.speed;
+  speedSlider.value = data.speed;
+  speedValue.textContent = data.speed + '×';
+  ignore = false;
+});
 
 function applyState(s) {
   if (!s) return;
@@ -653,11 +758,21 @@ function applyState(s) {
     player.load();
     player.onloadedmetadata = () => {
       player.currentTime = s.currentTime || 0;
+      if (s.playbackRate) {
+        player.playbackRate = s.playbackRate;
+        speedSlider.value = s.playbackRate;
+        speedValue.textContent = s.playbackRate + '×';
+      }
       if (s.isPlaying) player.play().catch(() => {});
     };
   } else {
     if (Math.abs(player.currentTime - (s.currentTime || 0)) > 0.5)
       player.currentTime = s.currentTime || 0;
+    if (s.playbackRate && Math.abs(player.playbackRate - s.playbackRate) > 0.01) {
+      player.playbackRate = s.playbackRate;
+      speedSlider.value = s.playbackRate;
+      speedValue.textContent = s.playbackRate + '×';
+    }
     if (s.isPlaying && player.paused)
       player.play().catch(() => {});
     else if (!s.isPlaying && !player.paused)
@@ -770,6 +885,7 @@ io.on("connection", (socket) => {
         videoUrl: "", 
         isPlaying: false, 
         currentTime: 0,
+        playbackRate: 1,
         chatHistory: []
       });
     }
@@ -780,7 +896,8 @@ io.on("connection", (socket) => {
     socket.emit("video:state", {
       videoUrl: roomData.videoUrl,
       isPlaying: roomData.isPlaying,
-      currentTime: roomData.currentTime
+      currentTime: roomData.currentTime,
+      playbackRate: roomData.playbackRate
     });
     
     // Send chat history
@@ -803,6 +920,7 @@ io.on("connection", (socket) => {
     const s = rooms.get(room);
     if (!s) return;
     Object.assign(s, { videoUrl: url, currentTime: 0, isPlaying: false });
+    // Preserve playback rate when loading new video
     io.to(room).emit("video:update", s);
   });
 
@@ -827,6 +945,13 @@ io.on("connection", (socket) => {
     if (!s) return;
     s.currentTime = time;
     socket.to(room).emit("video:update", s);
+  });
+
+  socket.on("video:speed", ({ room, speed }) => {
+    const s = rooms.get(room);
+    if (!s) return;
+    s.playbackRate = speed;
+    socket.to(room).emit("video:speed", { speed });
   });
 
   socket.on("chat:send", ({ room, username, message }) => {
