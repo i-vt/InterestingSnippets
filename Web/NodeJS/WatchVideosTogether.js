@@ -48,7 +48,7 @@ const upload = multer({ storage });
 const rooms = new Map();
 
 // === Session management (max 1000 sessions) ===
-const sessions = new Map(); // sessionId -> username
+const sessions = new Map();
 const MAX_SESSIONS = 1000;
 
 // === Upload route ===
@@ -117,28 +117,21 @@ app.get("/", (_, res) => {
 
 // === Serve the client page ===
 app.get("/room", (req, res) => {
-  // Get or create session
   let sessionId = req.cookies.sessionId;
   let username;
   
   if (sessionId && sessions.has(sessionId)) {
-    // Existing session - retrieve username from server
     username = sessions.get(sessionId);
   } else {
-    // New session - generate both session ID and username
     sessionId = uuidv4();
     username = generateUsername();
-    
-    // Store in sessions map
     sessions.set(sessionId, username);
     
-    // Enforce max sessions limit (FIFO)
     if (sessions.size > MAX_SESSIONS) {
       const firstKey = sessions.keys().next().value;
       sessions.delete(firstKey);
     }
     
-    // Set session cookie (1 year expiry)
     res.cookie("sessionId", sessionId, { 
       maxAge: 365 * 24 * 60 * 60 * 1000, 
       httpOnly: true 
@@ -150,9 +143,13 @@ app.get("/room", (req, res) => {
 <head>
 <meta charset="utf-8">
 <title>🎬 Shared Video Player</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <style>
-* { box-sizing: border-box; }
+* { 
+  box-sizing: border-box; 
+  -webkit-tap-highlight-color: transparent;
+}
+
 body { 
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; 
   background: #0a0a0a; 
@@ -161,9 +158,11 @@ body {
   display: flex; 
   flex-direction: column; 
   height: 100vh; 
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* ===== ENTERPRISE HEADER ===== */
+/* ===== DESKTOP HEADER ===== */
 header {
   background: linear-gradient(135deg, #1a1a1d 0%, #0f0f11 100%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -297,7 +296,8 @@ header {
 input[type="text"],
 input[type="password"] {
   width: 100%;
-  padding: 10px 12px 10px 36px;
+  height: 42px;
+  padding: 0 12px 0 36px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
@@ -327,8 +327,10 @@ input[type="file"] {
 .file-upload-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 10px 16px;
+  height: 42px;
+  padding: 0 16px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
@@ -337,6 +339,7 @@ input[type="file"] {
   cursor: pointer;
   transition: all 0.2s ease;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .file-upload-btn:hover {
@@ -345,15 +348,17 @@ input[type="file"] {
 }
 
 .btn {
-  padding: 10px 20px;
+  height: 42px;
+  padding: 0 20px;
   border-radius: 8px;
-  border: none;
+  border: 1px solid transparent;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   white-space: nowrap;
   font-family: inherit;
@@ -374,17 +379,6 @@ input[type="file"] {
   transform: translateY(0);
 }
 
-.btn-secondary {
-  background: rgba(255, 255, 255, 0.08);
-  color: #e4e4e7;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.18);
-}
-
 .upload-section {
   display: flex;
   flex-direction: column;
@@ -392,18 +386,45 @@ input[type="file"] {
 }
 
 /* ===== MAIN CONTENT ===== */
-.main-content { display:flex; flex:1; overflow:hidden; }
-.video-section { flex:1; display:flex; flex-direction:column; align-items:center; padding:20px; overflow-y:auto; }
-.chat-section { width:320px; background:#0f0f11; border-left:1px solid rgba(255, 255, 255, 0.1); display:flex; flex-direction:column; }
-video { width:100%; max-width:900px; border-radius:12px; background:#000; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6); }
+.main-content { 
+  display: flex; 
+  flex: 1; 
+  overflow: hidden;
+}
+
+.video-section { 
+  flex: 1; 
+  display: flex; 
+  flex-direction: column; 
+  align-items: center; 
+  padding: 20px; 
+  overflow-y: auto;
+}
+
+.chat-section { 
+  width: 320px; 
+  background: #0f0f11; 
+  border-left: 1px solid rgba(255, 255, 255, 0.1); 
+  display: flex; 
+  flex-direction: column;
+}
+
+video { 
+  width: 100%; 
+  max-width: 900px; 
+  border-radius: 12px; 
+  background: #000; 
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
 
 .player-controls {
   margin-top: 20px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 24px;
-  justify-content: center;
-  flex-wrap: wrap;
+  gap: 16px;
+  width: 100%;
+  max-width: 900px;
 }
 
 .speed-control {
@@ -414,6 +435,7 @@ video { width:100%; max-width:900px; border-radius:12px; background:#000; box-sh
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
+  max-width: 400px;
 }
 
 .speed-label {
@@ -443,12 +465,6 @@ video { width:100%; max-width:900px; border-radius:12px; background:#000; box-sh
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
-  transition: all 0.2s ease;
-}
-
-.speed-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.6);
 }
 
 .speed-slider::-moz-range-thumb {
@@ -459,12 +475,6 @@ video { width:100%; max-width:900px; border-radius:12px; background:#000; box-sh
   cursor: pointer;
   border: none;
   box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
-  transition: all 0.2s ease;
-}
-
-.speed-slider::-moz-range-thumb:hover {
-  transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.6);
 }
 
 .speed-value {
@@ -479,7 +489,6 @@ video { width:100%; max-width:900px; border-radius:12px; background:#000; box-sh
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); 
   color: white;
   font-size: 16px; 
-  margin-top: 16px; 
   padding: 12px 24px;
   border-radius: 8px;
   border: none;
@@ -495,33 +504,82 @@ video { width:100%; max-width:900px; border-radius:12px; background:#000; box-sh
 }
 
 /* Chat styles */
-.chat-header { padding:16px; background: rgba(255, 255, 255, 0.04); border-bottom:1px solid rgba(255, 255, 255, 0.08); font-weight:600; font-size: 14px; }
-.chat-messages { flex:1; overflow-y:auto; padding:16px; }
-.message { margin-bottom:12px; word-wrap:break-word; }
-.message .username { font-weight:600; color:#3b82f6; margin-right:6px; }
-.message .text { color:#d4d4d8; }
-.message.system { opacity:0.6; font-style:italic; font-size: 13px; }
-.message.system .text { color:#a1a1aa; }
-.chat-input-area { padding:16px; background: rgba(255, 255, 255, 0.04); border-top:1px solid rgba(255, 255, 255, 0.08); }
+.chat-header { 
+  padding: 16px; 
+  background: rgba(255, 255, 255, 0.04); 
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08); 
+  font-weight: 600; 
+  font-size: 14px;
+}
+
+.your-username { 
+  padding: 12px 16px; 
+  text-align: center; 
+  color: #3b82f6; 
+  font-size: 12px; 
+  background: rgba(59, 130, 246, 0.08); 
+  font-weight: 500;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chat-messages { 
+  flex: 1; 
+  overflow-y: auto; 
+  padding: 16px;
+}
+
+.message { 
+  margin-bottom: 12px; 
+  word-wrap: break-word;
+}
+
+.message .username { 
+  font-weight: 600; 
+  color: #3b82f6; 
+  margin-right: 6px;
+}
+
+.message .text { 
+  color: #d4d4d8;
+}
+
+.message.system { 
+  opacity: 0.6; 
+  font-style: italic; 
+  font-size: 13px;
+}
+
+.message.system .text { 
+  color: #a1a1aa;
+}
+
+.chat-input-area { 
+  padding: 16px; 
+  background: rgba(255, 255, 255, 0.04); 
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 #chatInput { 
-  width:calc(100% - 70px); 
-  padding:10px 12px; 
-  border-radius:8px; 
+  width: calc(100% - 70px); 
+  padding: 10px 12px; 
+  border-radius: 8px; 
   background: rgba(255, 255, 255, 0.06); 
-  color:#f4f4f5; 
-  border:1px solid rgba(255, 255, 255, 0.12);
+  color: #f4f4f5; 
+  border: 1px solid rgba(255, 255, 255, 0.12);
   font-size: 14px;
   font-family: inherit;
 }
+
 #chatInput:focus {
   outline: none;
   border-color: #3b82f6;
   background: rgba(255, 255, 255, 0.08);
 }
+
 #sendBtn { 
-  width:60px; 
-  padding:10px; 
-  background:#3b82f6; 
+  width: 60px; 
+  padding: 10px; 
+  background: #3b82f6; 
   color: white;
   border: none;
   border-radius: 8px;
@@ -529,83 +587,425 @@ video { width:100%; max-width:900px; border-radius:12px; background:#000; box-sh
   font-weight: 600;
   transition: all 0.2s ease;
 }
+
 #sendBtn:hover { 
-  background:#2563eb; 
+  background: #2563eb; 
   transform: translateY(-1px);
 }
-.your-username { 
-  padding:12px 16px; 
-  text-align:center; 
-  color:#3b82f6; 
-  font-size:12px; 
-  background: rgba(59, 130, 246, 0.08); 
-  font-weight: 500;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+/* ===== MOBILE-SPECIFIC STYLES ===== */
+.mobile-header {
+  display: none;
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
-  .header-controls {
-    grid-template-columns: 1fr;
-  }
-  
-  .upload-section {
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
+.mobile-tabs {
+  display: none;
 }
 
+.mobile-menu-btn {
+  display: none;
+}
+
+.mobile-controls-drawer {
+  display: none;
+}
+
+/* ===== MOBILE BREAKPOINT ===== */
 @media (max-width: 768px) {
-  .header-top {
+  /* Hide desktop header */
+  header {
+    display: none;
+  }
+
+  /* Show mobile header */
+  .mobile-header {
+    display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    background: linear-gradient(180deg, #1e1b4b 0%, #312e81 100%);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+    position: relative;
+    z-index: 100;
+  }
+
+  .mobile-header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+  }
+
+  .mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .mobile-logo {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+  }
+
+  .mobile-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #fef3c7;
+    margin: 0;
+  }
+
+  .mobile-room-badge {
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #fef3c7;
+    backdrop-filter: blur(10px);
+  }
+
+  .mobile-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: #fef3c7;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .mobile-menu-btn:active {
+    transform: scale(0.95);
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  .mobile-user-badge {
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.2);
+    text-align: center;
+    font-size: 12px;
+    color: #fde68a;
+    font-weight: 500;
+  }
+
+  /* Mobile controls drawer */
+  .mobile-controls-drawer {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 200;
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+    overflow-y: auto;
+    padding: 20px;
+  }
+
+  .mobile-controls-drawer.active {
+    transform: translateY(0);
+  }
+
+  .drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  .drawer-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #f59e0b;
+  }
+
+  .drawer-close {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 50%;
+    color: #e4e4e7;
+    font-size: 24px;
+    cursor: pointer;
+  }
+
+  .drawer-section {
+    margin-bottom: 24px;
+  }
+
+  .drawer-section-label {
+    font-size: 12px;
+    color: #f59e0b;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 12px;
+  }
+
+  .drawer-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .drawer-input {
+    width: 100%;
+    height: 48px;
+    padding: 0 16px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 2px solid rgba(249, 115, 22, 0.3);
+    border-radius: 12px;
+    color: #f4f4f5;
+    font-size: 15px;
+  }
+
+  .drawer-input:focus {
+    outline: none;
+    border-color: #f59e0b;
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  .drawer-btn {
+    width: 100%;
+    height: 48px;
+    background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+  }
+
+  .drawer-btn:active {
+    transform: scale(0.98);
+  }
+
+  .drawer-file-label {
+    width: 100%;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 2px dashed rgba(249, 115, 22, 0.3);
+    border-radius: 12px;
+    color: #fde68a;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* Mobile tabs */
+  .mobile-tabs {
+    display: flex;
+    background: #1e1b4b;
+    border-bottom: 2px solid rgba(245, 158, 11, 0.3);
+  }
+
+  .mobile-tab {
+    flex: 1;
+    padding: 14px;
+    background: transparent;
+    border: none;
+    color: #a78bfa;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+  }
+
+  .mobile-tab.active {
+    color: #fde68a;
+    background: rgba(245, 158, 11, 0.1);
+  }
+
+  .mobile-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #f59e0b 0%, #f97316 100%);
+  }
+
+  /* Mobile content */
+  .main-content {
+    flex-direction: column;
+    background: #0a0a0a;
+  }
+
+  .video-section,
+  .chat-section {
+    display: none;
+    width: 100%;
+    border: none;
+  }
+
+  .video-section.active,
+  .chat-section.active {
+    display: flex;
+  }
+
+  .video-section {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .video-section.active {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  video {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0;
+    flex-shrink: 0;
+  }
+
+  .player-controls {
+    margin-top: 16px;
+    padding: 0 16px 16px;
     gap: 12px;
   }
-  
-  .room-info {
+
+  .speed-control {
     width: 100%;
-    justify-content: center;
+    max-width: 100%;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    padding: 10px 16px;
   }
-  
-  .main-content { 
-    flex-direction:column; 
+
+  .speed-label {
+    color: #fde68a;
   }
-  
-  .chat-section { 
-    width:100%; 
-    max-height:300px; 
-    border-left:none; 
-    border-top:1px solid rgba(255, 255, 255, 0.1); 
+
+  .speed-slider {
+    flex: 1;
   }
-  
-  .input-group {
-    flex-direction: column;
+
+  .speed-slider::-webkit-slider-thumb {
+    background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+    width: 22px;
+    height: 22px;
   }
-  
-  .btn {
+
+  .speed-slider::-moz-range-thumb {
+    background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+    width: 22px;
+    height: 22px;
+  }
+
+  .speed-value {
+    color: #f59e0b;
+  }
+
+  #unmuteBtn {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    font-size: 15px;
+    padding: 12px 20px;
     width: 100%;
-    justify-content: center;
+    max-width: 300px;
+  }
+
+  /* Mobile chat */
+  .chat-section.active {
+    background: #0a0a0a;
+  }
+
+  .chat-header {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+    color: #fde68a;
+    padding: 14px 16px;
+    border-bottom: 2px solid rgba(245, 158, 11, 0.3);
+  }
+
+  .your-username {
+    background: rgba(245, 158, 11, 0.1);
+    color: #fde68a;
+    border-bottom: 1px solid rgba(245, 158, 11, 0.2);
+  }
+
+  .chat-messages {
+    background: #0a0a0a;
+  }
+
+  .message .username {
+    color: #f59e0b;
+  }
+
+  .chat-input-area {
+    display: flex;
+    gap: 10px;
+    background: #1a1a1a;
+    border-top: 2px solid rgba(245, 158, 11, 0.3);
+  }
+
+  #chatInput {
+    flex: 1;
+    width: auto;
+    height: 44px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #f4f4f5;
+  }
+
+  #chatInput:focus {
+    border-color: #f59e0b;
+  }
+
+  #sendBtn {
+    width: auto;
+    padding: 0 20px;
+    background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+    height: 44px;
+  }
+
+  #sendBtn:active {
+    transform: scale(0.95);
   }
 }
 
 @media (max-width: 480px) {
-  .header-container {
-    padding: 0 16px;
+  .mobile-title {
+    font-size: 14px;
   }
-  
-  .brand-title {
+
+  .mobile-logo {
+    width: 32px;
+    height: 32px;
     font-size: 16px;
   }
-  
-  .logo {
-    width: 36px;
-    height: 36px;
-    font-size: 18px;
+
+  .mobile-room-badge {
+    font-size: 10px;
+    padding: 4px 10px;
   }
 }
 </style>
 </head>
 <body>
+<!-- DESKTOP HEADER -->
 <header>
   <div class="header-container">
     <div class="header-top">
@@ -656,18 +1056,69 @@ video { width:100%; max-width:900px; border-radius:12px; background:#000; box-sh
   </div>
 </header>
 
+<!-- MOBILE HEADER -->
+<div class="mobile-header">
+  <div class="mobile-header-top">
+    <div class="mobile-brand">
+      <div class="mobile-logo">🎬</div>
+      <h1 class="mobile-title">Watch Together</h1>
+    </div>
+    <div class="mobile-room-badge" id="mobileRoomId"></div>
+    <button class="mobile-menu-btn" id="mobileMenuBtn">⚙️</button>
+  </div>
+  <div class="mobile-user-badge">
+    You are: <span id="mobileUsername">${username}</span>
+  </div>
+</div>
+
+<!-- MOBILE TABS -->
+<div class="mobile-tabs">
+  <button class="mobile-tab active" data-tab="video">📺 Video</button>
+  <button class="mobile-tab" data-tab="chat">💬 Chat</button>
+</div>
+
+<!-- MOBILE CONTROLS DRAWER -->
+<div class="mobile-controls-drawer" id="mobileDrawer">
+  <div class="drawer-header">
+    <div class="drawer-title">⚙️ Controls</div>
+    <button class="drawer-close" id="drawerClose">×</button>
+  </div>
+  
+  <div class="drawer-section">
+    <div class="drawer-section-label">🎥 Load Video</div>
+    <div class="drawer-input-group">
+      <input type="text" class="drawer-input" id="mobileVideoUrl" placeholder="Enter video URL">
+      <button class="drawer-btn" id="mobileLoadBtn">▶ Load Video</button>
+    </div>
+  </div>
+  
+  <div class="drawer-section">
+    <div class="drawer-section-label">📤 Upload Video</div>
+    <div class="drawer-input-group">
+      <input type="password" class="drawer-input" id="mobileAdminKey" placeholder="Admin Key">
+      <label for="mobileUploadInput" class="drawer-file-label">
+        <span>📁</span>
+        <span id="mobileFileName">Choose File</span>
+      </label>
+      <input type="file" id="mobileUploadInput" accept="video/*" style="display:none">
+      <button class="drawer-btn" id="mobileUploadBtn">⬆ Upload Video</button>
+    </div>
+  </div>
+</div>
+
 <div class="main-content">
-  <div class="video-section">
-    <video id="player" controls muted></video>
+  <div class="video-section active">
+    <video id="player" controls muted playsinline></video>
     <div class="player-controls">
-      <button id="unmuteBtn">🔇 Click to Enable Sound</button>
       <div class="speed-control">
         <span class="speed-label">⚡ Speed:</span>
         <input type="range" id="speedSlider" class="speed-slider" min="0.25" max="3" step="0.25" value="1">
         <span class="speed-value" id="speedValue">1×</span>
       </div>
+      <button id="unmuteBtn">🔇 Click to Enable Sound</button>
     </div>
   </div>
+  
   <div class="chat-section">
     <div class="chat-header">💬 Live Chat</div>
     <div class="your-username">You are: <span id="displayUsername">${username}</span></div>
@@ -678,10 +1129,13 @@ video { width:100%; max-width:900px; border-radius:12px; background:#000; box-sh
     </div>
   </div>
 </div>
+
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const room = new URLSearchParams(location.search).get("room") || "main";
 document.getElementById("roomIdDisplay").textContent = room;
+document.getElementById("mobileRoomId").textContent = room;
+document.getElementById("mobileUsername").textContent = "${username}";
 
 const socket = io();
 const player = document.getElementById("player");
@@ -697,15 +1151,103 @@ const chatMessages = document.getElementById("chatMessages");
 const speedSlider = document.getElementById("speedSlider");
 const speedValue = document.getElementById("speedValue");
 
+// Mobile elements
+const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+const mobileDrawer = document.getElementById("mobileDrawer");
+const drawerClose = document.getElementById("drawerClose");
+const mobileVideoUrl = document.getElementById("mobileVideoUrl");
+const mobileLoadBtn = document.getElementById("mobileLoadBtn");
+const mobileAdminKey = document.getElementById("mobileAdminKey");
+const mobileUploadInput = document.getElementById("mobileUploadInput");
+const mobileUploadBtn = document.getElementById("mobileUploadBtn");
+const mobileFileName = document.getElementById("mobileFileName");
+const mobileTabs = document.querySelectorAll(".mobile-tab");
+const videoSection = document.querySelector(".video-section");
+const chatSection = document.querySelector(".chat-section");
+
 let ignore = false;
 let currentSource = "";
 let seekTimeout = null;
 let isSeeking = false;
 
-// Username is provided by server
 const myUsername = "${username}";
 
-// Speed control functionality
+// Mobile tab switching
+mobileTabs.forEach(tab => {
+  tab.addEventListener("click", () => {
+    const tabName = tab.dataset.tab;
+    mobileTabs.forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    
+    if (tabName === "video") {
+      videoSection.classList.add("active");
+      chatSection.classList.remove("active");
+    } else {
+      videoSection.classList.remove("active");
+      chatSection.classList.add("active");
+    }
+  });
+});
+
+// Mobile drawer
+mobileMenuBtn.addEventListener("click", () => {
+  mobileDrawer.classList.add("active");
+});
+
+drawerClose.addEventListener("click", () => {
+  mobileDrawer.classList.remove("active");
+});
+
+mobileDrawer.addEventListener("click", (e) => {
+  if (e.target === mobileDrawer) {
+    mobileDrawer.classList.remove("active");
+  }
+});
+
+// Mobile controls
+mobileLoadBtn.addEventListener("click", () => {
+  const url = mobileVideoUrl.value.trim();
+  if (url) {
+    socket.emit("video:load", { room, url });
+    mobileDrawer.classList.remove("active");
+  }
+});
+
+mobileUploadInput.addEventListener("change", (e) => {
+  if (e.target.files[0]) {
+    const fileName = e.target.files[0].name;
+    mobileFileName.textContent = fileName.length > 25 ? fileName.substring(0, 25) + '...' : fileName;
+  }
+});
+
+mobileUploadBtn.addEventListener("click", async () => {
+  const file = mobileUploadInput.files[0];
+  const key = mobileAdminKey.value.trim();
+  if (!file || !key) return alert("Enter admin key and select a file.");
+
+  const form = new FormData();
+  form.append("video", file);
+
+  const res = await fetch("/upload?key=" + encodeURIComponent(key), {
+    method: "POST",
+    body: form,
+  });
+  if (!res.ok) return alert(await res.text());
+
+  const data = await res.json();
+  const videoPath = data.url;
+
+  player.src = videoPath;
+  player.load();
+  player.onloadedmetadata = () => {
+    currentSource = videoPath;
+    socket.emit("video:load", { room, url: videoPath });
+  };
+  
+  mobileDrawer.classList.remove("active");
+});
+
+// Speed control
 speedSlider.addEventListener('input', (e) => {
   const speed = parseFloat(e.target.value);
   speedValue.textContent = speed + '×';
@@ -715,15 +1257,16 @@ speedSlider.addEventListener('input', (e) => {
   }
 });
 
-// Update file input label when file is selected
+// Desktop file upload
 uploadInput.onchange = (e) => {
   const label = document.querySelector('.file-upload-btn');
   if (e.target.files[0]) {
-    label.innerHTML = \`<span>📁</span> \${e.target.files[0].name}\`;
+    const fileName = e.target.files[0].name;
+    label.innerHTML = \`<span>📁</span> \${fileName.length > 20 ? fileName.substring(0, 20) + '...' : fileName}\`;
   }
 };
 
-// Unmute handler
+// Unmute
 unmuteBtn.onclick = () => {
   player.muted = false;
   unmuteBtn.style.display = "none";
@@ -733,7 +1276,7 @@ player.onvolumechange = () => {
   if (!player.muted) unmuteBtn.style.display = "none";
 };
 
-// === VIDEO SYNC ===
+// VIDEO SYNC
 socket.emit("join", { room, username: myUsername });
 socket.on("video:state", applyState);
 socket.on("video:update", applyState);
@@ -820,7 +1363,6 @@ uploadBtn.onclick = async () => {
 
   const data = await res.json();
   const videoPath = data.url;
-  console.log("Uploaded:", videoPath);
 
   player.src = videoPath;
   player.load();
@@ -830,7 +1372,7 @@ uploadBtn.onclick = async () => {
   };
 };
 
-// === CHAT ===
+// CHAT
 socket.on("chat:message", (data) => {
   addMessage(data.username, data.message, data.isSystem);
 });
@@ -879,7 +1421,6 @@ io.on("connection", (socket) => {
   socket.on("join", ({ room, username }) => {
     socket.join(room);
     
-    // Initialize room if needed
     if (!rooms.has(room)) {
       rooms.set(room, { 
         videoUrl: "", 
@@ -892,7 +1433,6 @@ io.on("connection", (socket) => {
     
     const roomData = rooms.get(room);
     
-    // Send video state
     socket.emit("video:state", {
       videoUrl: roomData.videoUrl,
       isPlaying: roomData.isPlaying,
@@ -900,10 +1440,8 @@ io.on("connection", (socket) => {
       playbackRate: roomData.playbackRate
     });
     
-    // Send chat history
     socket.emit("chat:history", roomData.chatHistory);
     
-    // Announce user joined
     const joinMsg = {
       username: "System",
       message: `${username} joined the room`,
@@ -920,7 +1458,6 @@ io.on("connection", (socket) => {
     const s = rooms.get(room);
     if (!s) return;
     Object.assign(s, { videoUrl: url, currentTime: 0, isPlaying: false });
-    // Preserve playback rate when loading new video
     io.to(room).emit("video:update", s);
   });
 
