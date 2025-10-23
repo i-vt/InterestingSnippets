@@ -1,5 +1,5 @@
-using System;
 using System.IO;
+using System;
 
 class Program
 {
@@ -7,17 +7,37 @@ class Program
     {
         string folderPath = @"C:\path\to\your\folder";
 
-        // Check if the folder exists
-        if (!Directory.Exists(folderPath))
-        {
-            Console.WriteLine("Folder does not exist. Creating...");
-            // Create the folder
-            Directory.CreateDirectory(folderPath);
-            Console.WriteLine("Folder created.");
-        }
-        else
-        {
-            Console.WriteLine("Folder already exists.");
-        }
+        bool a = EnsureDirectoryExists(folderPath);
+
+        string path = GetPath(folderPath);
+    }
+
+    /// <summary>
+    /// Checks for a directory and creates it if necessary.
+    /// Returns true if the directory has been created.
+    /// </summary>
+    private static bool EnsureDirectoryExists(string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        if (Directory.Exists(path))
+            return false;
+
+        Directory.CreateDirectory(path);
+        return true;
+    }
+
+    /// <summary>
+    /// Checks for a directory and creates it if necessary.
+    /// Returns the directory path.
+    /// </summary>
+    private static string GetPath(string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        if (!Directory.Exists(path))
+            Directory.CreateDirectory(path);
+
+        return path;
     }
 }

@@ -1,31 +1,37 @@
 using System;
 using System.Runtime.InteropServices;
-using System.Windows.Forms;
 using System.Threading;
 
-public class MousePointerJitter : Form
+public class MousePointerJitter
 {
     [DllImport("user32.dll")]
-    public static extern bool SetCursorPos(int X, int Y);
+    static extern bool SetCursorPos(int X, int Y);
 
-    private System.Windows.Forms.Timer timer;
-    private Random random = new Random();
+    [DllImport("user32.dll")]
+    static extern bool GetCursorPos(out POINT lpPoint);
 
-    public MousePointerJitter()
+    [StructLayout(LayoutKind.Sequential)]
+    public struct POINT
     {
-        timer = new System.Windows.Forms.Timer();
-        timer.Interval = 5000; // 5 seconds
-        timer.Tick += new EventHandler(TimerEventProcessor);
-        timer.Start();
+        public int X;
+        public int Y;
     }
 
-    private void TimerEventProcessor(Object myObject, EventArgs myEventArgs)
+    static void Main()
     {
-        Cursor.Position = new System.Drawing.Point(Cursor.Position.X + random.Next(-10, 10), Cursor.Position.Y + random.Next(-10, 10));
-    }
+        Random random = new Random();
 
-    public static void Main()
-    {
-        Application.Run(new MousePointerJitter());
+        while (true)
+        {
+            // ms
+            Thread.Sleep(5000);
+
+            GetCursorPos(out POINT pos);
+
+            int newX = pos.X + random.Next(-10, 11);
+            int newY = pos.Y + random.Next(-10, 11);
+
+            SetCursorPos(newX, newY);
+        }
     }
 }

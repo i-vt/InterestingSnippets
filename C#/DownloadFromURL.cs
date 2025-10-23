@@ -1,10 +1,65 @@
-using System;
 using System.IO;
-using System.Net.Http;
 using System.Threading.Tasks;
+using System.Threading;
+using System;
+
+public class FileDownloader : IAsyncDisposable
+{
+    private readonly HttpClient _httpClient;
+
+    public FileDownloader(HttpClient? httpClient = null)
+    {
+        _httpClient = httpClient ?? new HttpClient
+        {
+            Timeout = TimeSpan.FromMinutes(5)
+        };
+    }
+
+    public async Task DownloadFileAsync(
+        Uri url,
+        string destinationPath,
+        IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        string fullPath = Path.GetFullPath(destinationPath);
+        string? dir = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrEmpty(dir))
+            Directory.CreateDirectory(dir);
+
+        using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        long? totalBytes = response.Content.Headers.ContentLength;
+        await using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        await using var fileStream = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+
+        var buffer = new byte[81920];
+        long totalRead = 0;
+        int read;
+
+        while ((read = await contentStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)) > 0)
+        {
+            await fileStream.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+            totalRead += read;
+
+            if (totalBytes.HasValue && progress is not null)
+            {
+                double percent = (double)totalRead / totalBytes.Value * 100;
+                progress.Report(percent);
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _httpClient.Dispose();
+        await Task.CompletedTask;
+    }
+}
 
 class Program
 {
+    // progname.exe "example url" "C:\Downloads\[filename]"
     static async Task<int> Main(string[] args)
     {
         if (args.Length < 2)
@@ -13,88 +68,34 @@ class Program
             return 1;
         }
 
-        string url = args[0];
-        string destinationPath = args[1];
-
-        // Validate URL
-        if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? validatedUrl))
+        if (!Uri.TryCreate(args[0], UriKind.Absolute, out var url))
         {
             Console.WriteLine("Error: Invalid URL format.");
             return 1;
         }
 
-        // Validate file path
-        try
-        {
-            string fullPath = Path.GetFullPath(destinationPath);
-            string? directory = Path.GetDirectoryName(fullPath);
-            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-        }
-        catch
-        {
-            Console.WriteLine("Error: Invalid destination path.");
-            return 1;
-        }
+        string path = args[1];
 
         try
         {
-            using HttpClient client = new HttpClient();
+            await using var downloader = new FileDownloader();
+
+            var progress = new Progress<double>(p =>
+            {
+                Console.Write($"\rProgress: {p:F1}%   ");
+            });
 
             Console.WriteLine($"Starting download from: {url}");
 
-            using HttpResponseMessage response = await client.GetAsync(validatedUrl, HttpCompletionOption.ResponseHeadersRead);
-            response.EnsureSuccessStatusCode();
+            await downloader.DownloadFileAsync(url, path, progress);
 
-            long? totalBytes = response.Content.Headers.ContentLength;
-
-            using Stream contentStream = await response.Content.ReadAsStreamAsync(),
-                          fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true);
-
-            var buffer = new byte[8192];
-            long totalRead = 0;
-            int read;
-
-            var lastReportedProgress = -1;
-
-            while ((read = await contentStream.ReadAsync(buffer.AsMemory(0, buffer.Length))) > 0)
-            {
-                await fileStream.WriteAsync(buffer.AsMemory(0, read));
-                totalRead += read;
-
-                if (totalBytes.HasValue)
-                {
-                    int progress = (int)((totalRead * 100L) / totalBytes.Value);
-                    if (progress != lastReportedProgress)
-                    {
-                        Console.Write($"\rProgress: {progress}%   ");
-                        lastReportedProgress = progress;
-                    }
-                }
-            }
-
-            Console.WriteLine($"\nDownload complete. File saved to: {destinationPath}");
+            Console.WriteLine($"\nDownload complete. File saved to: {path}");
             return 0;
-        }
-        catch (HttpRequestException hre)
-        {
-            Console.WriteLine($"Network error: {hre.Message}");
-        }
-        catch (IOException ioe)
-        {
-            Console.WriteLine($"File error: {ioe.Message}");
-        }
-        catch (UnauthorizedAccessException uae)
-        {
-            Console.WriteLine($"Permission error: {uae.Message}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Unexpected error: {ex.Message}");
+            Console.WriteLine($"\nError: {ex.Message}");
+            return 1;
         }
-
-        return 1;
     }
 }
