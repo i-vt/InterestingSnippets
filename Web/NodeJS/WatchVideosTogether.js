@@ -1,6 +1,6 @@
 // npm init -y
-// npm i express socket.io multer cookie-parser 
-// node SharedVideoPlayer.js
+// npm i express socket.io multer cookie-parser uuid mime-types
+// node WatchVideosTogether.js
 
 const express = require("express");
 const http = require("http");
@@ -32,6 +32,16 @@ function generateUsername() {
   const color = COLORS[Math.floor(Math.random() * COLORS.length)];
   const animal = ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
   return `${color}${animal}`;
+}
+
+// Function to generate a color hash from username
+function getUserColor(username) {
+  let hash = 0;
+  for (let i = 0; i < username.length; i++) {
+    hash = username.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = hash % 360;
+  return `hsl(${hue}, 70%, 60%)`;
 }
 
 // === Multer (video uploads) ===
@@ -149,7 +159,7 @@ app.get("/room", (req, res) => {
 <html>
 <head>
 <meta charset="utf-8">
-<title>🎬 Shared Video Player</title>
+<title>WatchVideosTogether.js</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 * { box-sizing: border-box; }
@@ -161,13 +171,14 @@ body {
   display: flex; 
   flex-direction: column; 
   height: 100vh; 
+  overflow: hidden;
 }
 
-/* ===== ENTERPRISE HEADER ===== */
+/* ===== ENTERPRISE HEADER - MOBILE FIRST ===== */
 header {
-  background: linear-gradient(135deg, #1a1a1d 0%, #0f0f11 100%);
+  background: linear-gradient(135deg, #1e1e22 0%, #121214 100%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
   flex-shrink: 0;
   position: relative;
   z-index: 100;
@@ -176,678 +187,666 @@ header {
 .header-container {
   max-width: 1600px;
   margin: 0 auto;
-  padding: 0 24px;
 }
 
 .header-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .logo {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  border-radius: 8px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  font-size: 18px;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  flex-shrink: 0;
 }
 
 .brand-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .brand-title {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
   color: #f4f4f5;
   margin: 0;
   letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
 .brand-subtitle {
-  font-size: 11px;
+  font-size: 10px;
   color: #71717a;
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
 }
 
 .room-info {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(59, 130, 246, 0.12);
+  border-radius: 8px;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  backdrop-filter: blur(8px);
 }
 
 .room-label {
-  font-size: 12px;
+  font-size: 10px;
   color: #a1a1aa;
   font-weight: 500;
-}
-
-.room-id {
-  font-family: 'Courier New', monospace;
-  color: #3b82f6;
-  font-weight: 600;
-  font-size: 13px;
-}
-
-.header-controls {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 16px;
-  padding: 16px 0;
-  align-items: start;
-}
-
-.control-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.section-label {
-  font-size: 11px;
-  color: #a1a1aa;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 4px;
-}
-
-.input-group {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.input-wrapper {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-}
-
-.input-icon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #71717a;
-  font-size: 14px;
-}
-
-input[type="text"],
-input[type="password"] {
-  width: 100%;
-  padding: 10px 12px 10px 36px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  color: #f4f4f5;
-  font-size: 14px;
-  transition: all 0.2s ease;
-  font-family: inherit;
-}
-
-input[type="text"]:focus,
-input[type="password"]:focus {
-  outline: none;
-  border-color: #3b82f6;
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-input[type="text"]::placeholder,
-input[type="password"]::placeholder {
-  color: #52525b;
-}
-
-input[type="file"] {
   display: none;
 }
 
-.file-upload-btn {
-  display: inline-flex;
+.room-id {
+  font-family: 'SF Mono', 'Courier New', monospace;
+  color: #60a5fa;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+}
+
+/* Mobile Tabs Navigation */
+.mobile-tabs {
+  display: flex;
+  background: rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mobile-tab {
+  flex: 1;
+  padding: 14px 16px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #71717a;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 2px solid transparent;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.mobile-tab.active {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
+  border-bottom-color: #3b82f6;
+}
+
+.mobile-tab:active {
+  transform: scale(0.98);
+}
+
+.controls-toggle {
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 10px 16px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
   border-radius: 8px;
-  color: #e4e4e7;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-weight: 500;
-}
-
-.file-upload-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.18);
-}
-
-.btn {
-  padding: 10px 20px;
-  border-radius: 8px;
-  border: none;
-  font-size: 14px;
+  color: #60a5fa;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
   white-space: nowrap;
-  font-family: inherit;
+  user-select: none;
 }
 
-.btn-primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+.controls-toggle:hover {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.4);
 }
 
-.btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+.controls-toggle:active {
+  transform: scale(0.97);
 }
 
-.btn-primary:active {
-  transform: translateY(0);
+.controls-toggle.expanded {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.5);
 }
 
-.btn-secondary {
-  background: rgba(255, 255, 255, 0.08);
-  color: #e4e4e7;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+/* Header Controls Section */
+.header-controls {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: rgba(0, 0, 0, 0.3);
+  border-top: 1px solid transparent;
 }
 
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.18);
+.header-controls.expanded {
+  max-height: 600px;
+  opacity: 1;
+  border-top-color: rgba(255, 255, 255, 0.05);
 }
 
-.upload-section {
+.controls-inner {
+  padding: 20px 16px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 16px;
 }
 
-/* ===== MAIN CONTENT ===== */
-.main-content { 
-  display:grid; 
-  grid-template-columns: 1fr 380px;
-  flex:1; 
-  overflow:hidden; 
-  min-height: 0;
+/* Participants Section */
+.participants-section {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.video-container {
-  display: flex;
-  flex-direction: column;
-  background: #000;
-  min-height: 0;
-}
-
-.video-section { 
-  flex:1; 
-  display:flex; 
-  align-items:center; 
-  justify-content: center;
-  overflow:hidden;
-  min-height: 0;
-  background: #000;
-}
-
-video { 
-  width:100%; 
-  height:100%; 
-  object-fit: contain;
-}
-
-/* Video Controls Panel - Below Video */
-.video-controls-panel {
-  background: linear-gradient(135deg, #1a1a1d 0%, #0f0f11 100%);
-  border-top: 2px solid rgba(255, 255, 255, 0.1);
-  padding: 14px 24px;
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  flex-wrap: wrap;
-  flex-shrink: 0;
-}
-
-.control-group {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.control-label {
-  font-size: 14px;
+.participants-header {
+  font-size: 11px;
   font-weight: 600;
   color: #a1a1aa;
-  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-/* Sound Toggle Button */
-.sound-control {
-  flex-shrink: 0;
+.participant-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: rgba(59, 130, 246, 0.2);
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #60a5fa;
 }
 
-.sound-toggle {
-  padding: 10px 18px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  color: white;
-  font-size: 18px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.participants-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.participant {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 600;
-  min-width: 70px;
-  justify-content: center;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.2s ease;
 }
 
-.sound-toggle:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+.participant:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-.sound-toggle:active {
+.participant-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.participant-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e4e4e7;
+  letter-spacing: 0.01em;
+}
+
+.participant.me {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.participant.me .participant-name::after {
+  content: " (You)";
+  font-weight: 400;
+  color: #60a5fa;
+  font-size: 11px;
+}
+
+/* Control Group Styling */
+.control-group {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.control-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #a1a1aa;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+  display: block;
+}
+
+.input-group {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.input-group:last-child {
+  margin-bottom: 0;
+}
+
+input[type="text"],
+input[type="file"] {
+  flex: 1;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #e4e4e7;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+input[type="text"]:focus,
+input[type="file"]:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+input[type="text"]::placeholder {
+  color: #71717a;
+}
+
+button {
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+button:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+button:active {
   transform: translateY(0);
-}
-
-.sound-toggle.muted {
-  background: rgba(239, 68, 68, 0.12);
-  border-color: rgba(239, 68, 68, 0.35);
-}
-
-.sound-toggle.unmuted {
-  background: rgba(34, 197, 94, 0.12);
-  border-color: rgba(34, 197, 94, 0.35);
+  box-shadow: 0 1px 4px rgba(59, 130, 246, 0.3);
 }
 
 /* Speed Control */
 .speed-control {
-  flex: 1;
-  min-width: 260px;
-  max-width: 550px;
-}
-
-.speed-slider-container {
   display: flex;
   align-items: center;
-  gap: 14px;
-  flex: 1;
+  gap: 12px;
 }
 
-#speedSlider {
-  flex: 1;
-  height: 7px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.1);
-  outline: none;
-  -webkit-appearance: none;
-  appearance: none;
-  cursor: pointer;
-}
-
-#speedSlider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  cursor: pointer;
-  box-shadow: 0 3px 10px rgba(59, 130, 246, 0.6);
-  transition: all 0.2s ease;
-}
-
-#speedSlider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.8);
-}
-
-#speedSlider::-webkit-slider-thumb:active {
-  transform: scale(1.1);
-}
-
-#speedSlider::-moz-range-thumb {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  cursor: pointer;
-  border: none;
-  box-shadow: 0 3px 10px rgba(59, 130, 246, 0.6);
-  transition: all 0.2s ease;
-}
-
-#speedSlider::-moz-range-thumb:hover {
-  transform: scale(1.2);
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.8);
-}
-
-#speedSlider::-moz-range-thumb:active {
-  transform: scale(1.1);
-}
-
-#speedSlider::-webkit-slider-runnable-track {
-  height: 7px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-#speedSlider::-moz-range-track {
-  height: 7px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.speed-value {
-  font-size: 16px;
-  font-weight: 700;
-  color: #3b82f6;
-  min-width: 52px;
-  text-align: right;
-}
-
-.chat-section { 
-  background:#0f0f11; 
-  border-left:1px solid rgba(255, 255, 255, 0.1); 
-  display:flex; 
-  flex-direction:column;
-  min-height: 0;
-}
-
-#unmuteBtn { 
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); 
-  color: white;
-  font-size: 16px; 
-  margin-top: 16px; 
-  padding: 12px 24px;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  font-weight: 600;
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-  transition: all 0.2s ease;
-}
-
-#unmuteBtn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
-}
-
-/* Chat styles */
-.chat-header { padding:16px; background: rgba(255, 255, 255, 0.04); border-bottom:1px solid rgba(255, 255, 255, 0.08); font-weight:600; font-size: 14px; }
-.chat-messages { flex:1; overflow-y:auto; padding:16px; }
-.message { margin-bottom:12px; word-wrap:break-word; }
-.message .username { font-weight:600; color:#3b82f6; margin-right:6px; }
-.message .text { color:#d4d4d8; }
-.message.system { opacity:0.6; font-style:italic; font-size: 13px; }
-.message.system .text { color:#a1a1aa; }
-.chat-input-area { padding:16px; background: rgba(255, 255, 255, 0.04); border-top:1px solid rgba(255, 255, 255, 0.08); }
-#chatInput { 
-  width:calc(100% - 70px); 
-  padding:10px 12px; 
-  border-radius:8px; 
-  background: rgba(255, 255, 255, 0.06); 
-  color:#f4f4f5; 
-  border:1px solid rgba(255, 255, 255, 0.12);
-  font-size: 14px;
-  font-family: inherit;
-}
-#chatInput:focus {
-  outline: none;
-  border-color: #3b82f6;
-  background: rgba(255, 255, 255, 0.08);
-}
-#sendBtn { 
-  width:60px; 
-  padding:10px; 
-  background:#3b82f6; 
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.2s ease;
-}
-#sendBtn:hover { 
-  background:#2563eb; 
-  transform: translateY(-1px);
-}
-.your-username { 
-  padding:12px 16px; 
-  text-align:center; 
-  color:#3b82f6; 
-  font-size:12px; 
-  background: rgba(59, 130, 246, 0.08); 
+.speed-control label {
+  font-size: 12px;
+  color: #a1a1aa;
   font-weight: 500;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  min-width: 35px;
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
-  .header-controls {
-    grid-template-columns: 1fr;
-  }
-  
-  .upload-section {
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-  
-  .control-section {
-    max-width: 100%;
-  }
+input[type="range"] {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  outline: none;
+  -webkit-appearance: none;
 }
 
-@media (max-width: 768px) {
-  .header-container {
-    padding: 0 16px;
-  }
-  
-  .header-top {
-    padding: 12px 0;
-    gap: 10px;
-  }
-  
-  .brand {
-    gap: 10px;
-  }
-  
-  .logo {
-    width: 32px;
-    height: 32px;
-    font-size: 16px;
-  }
-  
-  .brand-title {
-    font-size: 16px;
-  }
-  
-  .brand-subtitle {
-    font-size: 10px;
-  }
-  
-  .room-info {
-    padding: 6px 12px;
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+  transition: all 0.2s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 3px 10px rgba(59, 130, 246, 0.5);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+  transition: all 0.2s ease;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 3px 10px rgba(59, 130, 246, 0.5);
+}
+
+/* Sound Toggle */
+.sound-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.sound-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.sound-toggle:active {
+  transform: scale(0.97);
+}
+
+.sound-toggle.muted {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.sound-toggle.unmuted {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.sound-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.sound-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e4e4e7;
+  letter-spacing: 0.02em;
+}
+
+/* ===== DESKTOP LAYOUT (min-width: 768px) ===== */
+@media (min-width: 768px) {
+  .mobile-tabs { 
+    display: none; 
   }
   
   .room-label {
-    font-size: 11px;
-  }
-  
-  .room-id {
-    font-size: 12px;
-  }
-  
-  .header-controls {
-    padding: 12px 0;
-    gap: 12px;
-  }
-  
-  .section-label {
-    font-size: 10px;
-  }
-  
-  input[type="text"],
-  input[type="password"] {
-    font-size: 14px;
-    padding: 9px 10px 9px 32px;
-  }
-  
-  .btn {
-    padding: 9px 16px;
-    font-size: 12px;
-  }
-  
-  .file-upload-btn {
-    padding: 9px 16px;
-    font-size: 12px;
-  }
-  
-  .input-group {
-    gap: 6px;
-  }
-  
-  .main-content { 
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr auto auto;
-  }
-  
-  .video-container {
-    min-height: 300px;
-  }
-  
-  .video-controls-panel {
-    padding: 12px 16px;
-    gap: 12px;
-  }
-  
-  .control-group {
-    width: 100%;
-    gap: 10px;
-  }
-  
-  .sound-control {
-    justify-content: flex-start;
-  }
-  
-  .sound-toggle {
-    padding: 9px 16px;
-    font-size: 16px;
-    min-width: 65px;
-  }
-  
-  .control-label {
-    font-size: 12px;
-  }
-  
-  .speed-control {
-    max-width: none;
-  }
-  
-  .speed-value {
-    font-size: 14px;
-    min-width: 45px;
-  }
-  
-  .chat-section { 
-    max-height:320px;
-    border-left:none; 
-    border-top:1px solid rgba(255, 255, 255, 0.1); 
-  }
-  
-  .input-group {
-    flex-direction: column;
-  }
-  
-  .btn {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-/* Extra mobile optimization */
-@media (max-width: 480px) {
-  .header-container {
-    padding: 0 12px;
-  }
-  
-  .header-top {
-    padding: 10px 0;
-  }
-  
-  .logo {
-    width: 28px;
-    height: 28px;
-    font-size: 14px;
+    display: inline;
   }
   
   .brand-title {
-    font-size: 14px;
+    font-size: 18px;
   }
   
   .brand-subtitle {
-    display: none;
-  }
-  
-  .video-controls-panel {
-    padding: 10px 12px;
-    gap: 10px;
-  }
-  
-  .sound-toggle {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-@media (max-width: 480px) {
-  .header-container {
-    padding: 0 16px;
-  }
-  
-  .brand-title {
-    font-size: 16px;
+    font-size: 11px;
   }
   
   .logo {
-    width: 36px;
-    height: 36px;
-    font-size: 18px;
+    width: 42px;
+    height: 42px;
+    font-size: 20px;
   }
+  
+  /* Keep toggle button visible on desktop */
+  .controls-toggle {
+    display: flex;
+  }
+  
+  /* Controls can still be expanded/collapsed on desktop */
+  .header-controls.expanded {
+    max-height: 800px;
+  }
+  
+  .controls-inner {
+    padding: 24px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  
+  .participants-section {
+    flex: 1 1 100%;
+  }
+  
+  .control-group {
+    flex: 1 1 calc(50% - 10px);
+    min-width: 280px;
+  }
+  
+  .speed-control {
+    flex: 1 1 100%;
+  }
+}
+
+/* ===== MAIN CONTENT AREA ===== */
+.main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Video Container */
+#videoContainer {
+  flex: 1;
+  display: none;
+  flex-direction: column;
+  background: #000;
+  position: relative;
+}
+
+#videoContainer.active {
+  display: flex;
+}
+
+video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+/* Chat Container */
+#chatContainer {
+  flex: 1;
+  display: none;
+  flex-direction: column;
+  background: #0f0f11;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#chatContainer.active {
+  display: flex;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border-left: 3px solid rgba(59, 130, 246, 0.5);
+  animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message.system {
+  background: rgba(168, 85, 247, 0.1);
+  border-left-color: rgba(168, 85, 247, 0.5);
+  font-style: italic;
+}
+
+.username {
+  font-size: 12px;
+  font-weight: 700;
+  color: #60a5fa;
+  letter-spacing: 0.02em;
+}
+
+.message.system .username {
+  color: #c084fc;
+}
+
+.text {
+  font-size: 14px;
+  color: #e4e4e7;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.chat-input-area {
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.4);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.chat-input-group {
+  display: flex;
+  gap: 8px;
+}
+
+#chatInput {
+  flex: 1;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: #e4e4e7;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+#chatInput:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+#chatInput::placeholder {
+  color: #71717a;
+}
+
+#sendBtn {
+  padding: 12px 20px;
+  font-size: 14px;
+}
+
+/* Desktop Layout for Main Content */
+@media (min-width: 768px) {
+  #videoContainer {
+    display: flex;
+    flex: 2;
+  }
+  
+  #chatContainer {
+    display: flex;
+    flex: 1;
+    max-width: 400px;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 </style>
 </head>
@@ -858,44 +857,67 @@ video {
       <div class="brand">
         <div class="logo">🎬</div>
         <div class="brand-text">
-          <h1 class="brand-title">WatchVideosTogether.js</h1>
+          <div class="brand-title">WatchVideosTogether.js</div>
           <div class="brand-subtitle">Made with Love ❤️</div>
         </div>
       </div>
       <div class="room-info">
         <span class="room-label">Room:</span>
-        <span class="room-id" id="roomIdDisplay"></span>
+        <span class="room-id" id="roomId"></span>
       </div>
     </div>
     
-    <div class="header-controls">
-      <div class="control-section">
-        <label class="section-label">🎥 Load Video</label>
-        <div class="input-group">
-          <div class="input-wrapper">
-            <span class="input-icon">🔗</span>
-            <input type="text" id="videoUrl" placeholder="Enter video URL (mp4, webm)">
+    <div class="mobile-tabs">
+      <button class="mobile-tab active" id="videoTab">📹 Video</button>
+      <button class="mobile-tab" id="chatTab">💬 Chat</button>
+    </div>
+    
+    <button class="controls-toggle" id="controlsToggle">
+      <span>⚙️</span>
+      <span id="toggleText">Show Controls</span>
+    </button>
+    
+    <div class="header-controls" id="headerControls">
+      <div class="controls-inner">
+        <!-- Participants Section -->
+        <div class="participants-section">
+          <div class="participants-header">
+            👥 Participants
+            <span class="participant-count" id="participantCount">0</span>
           </div>
-          <button class="btn btn-primary" id="loadBtn">
-            <span>▶</span> Load Video
-          </button>
+          <div class="participants-list" id="participantsList">
+            <!-- Participants will be added here dynamically -->
+          </div>
         </div>
-      </div>
-      
-      <div class="upload-section">
-        <label class="section-label">📤 Admin Upload</label>
-        <div class="input-group">
-          <div class="input-wrapper">
-            <span class="input-icon">🔑</span>
-            <input type="password" id="adminKey" placeholder="Admin Key">
+        
+        <div class="control-group">
+          <label class="control-label">🔗 Load Video URL</label>
+          <div class="input-group">
+            <input type="text" id="videoUrl" placeholder="https://example.com/video.mp4">
+            <button id="loadBtn">Load</button>
           </div>
-          <label for="uploadInput" class="file-upload-btn">
-            <span>📁</span> Choose File
-          </label>
-          <input type="file" id="uploadInput" accept="video/*">
-          <button class="btn btn-primary" id="uploadBtn">
-            <span>⬆</span> Upload
-          </button>
+        </div>
+        
+        <div class="control-group">
+          <label class="control-label">📤 Upload Video (Admin)</label>
+          <div class="input-group">
+            <input type="text" id="adminKey" placeholder="Admin Key">
+          </div>
+          <div class="input-group">
+            <input type="file" id="uploadInput" accept="video/*">
+            <button id="uploadBtn">Upload</button>
+          </div>
+        </div>
+        
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="0.25" max="2" step="0.25" value="1">
+          <span id="speedValue">1x</span>
+        </div>
+        
+        <div class="sound-toggle" id="soundToggle">
+          <span class="sound-icon" id="soundIcon">🔊</span>
+          <span class="sound-label">Click to toggle sound</span>
         </div>
       </div>
     </div>
@@ -903,84 +925,65 @@ video {
 </header>
 
 <div class="main-content">
-  <div class="video-container">
-    <div class="video-section">
-      <video id="player" controls muted></video>
-    </div>
-    <div class="video-controls-panel">
-      <div class="control-group sound-control">
-        <button id="soundToggle" class="sound-toggle muted">
-          <span class="sound-icon">🔇</span>
-        </button>
-      </div>
-      <div class="control-group speed-control">
-        <label class="control-label">
-          <span>⚡ Speed:</span>
-        </label>
-        <div class="speed-slider-container">
-          <input type="range" id="speedSlider" min="0.25" max="3" step="0.25" value="1">
-          <span class="speed-value" id="speedValue">1x</span>
-        </div>
-      </div>
-    </div>
+  <div id="videoContainer" class="active">
+    <video id="player" controls></video>
   </div>
-  <div class="chat-section">
-    <div class="chat-header">💬 Live Chat</div>
-    <div class="your-username">You are: <span id="displayUsername">${username}</span></div>
+  
+  <div id="chatContainer">
     <div class="chat-messages" id="chatMessages"></div>
     <div class="chat-input-area">
-      <input type="text" id="chatInput" placeholder="Type a message..." maxlength="500">
-      <button id="sendBtn">Send</button>
+      <div class="chat-input-group">
+        <input type="text" id="chatInput" placeholder="Type a message...">
+        <button id="sendBtn">Send</button>
+      </div>
     </div>
   </div>
 </div>
+
 <script src="/socket.io/socket.io.js"></script>
 <script>
-const room = new URLSearchParams(location.search).get("room") || "main";
-document.getElementById("roomIdDisplay").textContent = room;
-
 const socket = io();
+const urlParams = new URLSearchParams(location.search);
+const room = urlParams.get("room") || "default";
+const myUsername = "${username}";
+
+// Display room ID
+document.getElementById("roomId").textContent = room;
+
+// UI elements
 const player = document.getElementById("player");
 const videoUrl = document.getElementById("videoUrl");
 const loadBtn = document.getElementById("loadBtn");
-const uploadBtn = document.getElementById("uploadBtn");
 const uploadInput = document.getElementById("uploadInput");
+const uploadBtn = document.getElementById("uploadBtn");
 const adminKey = document.getElementById("adminKey");
-const soundToggle = document.getElementById("soundToggle");
 const speedSlider = document.getElementById("speedSlider");
 const speedValue = document.getElementById("speedValue");
+const soundToggle = document.getElementById("soundToggle");
+const soundIcon = document.getElementById("soundIcon");
+const chatMessages = document.getElementById("chatMessages");
 const chatInput = document.getElementById("chatInput");
 const sendBtn = document.getElementById("sendBtn");
-const chatMessages = document.getElementById("chatMessages");
+const participantsList = document.getElementById("participantsList");
+const participantCount = document.getElementById("participantCount");
 
+// State
 let ignore = false;
-let currentSource = "";
-let seekTimeout = null;
 let isSeeking = false;
+let seekTimeout;
+let currentSource = "";
 
-// Username is provided by server
-const myUsername = "${username}";
-
-// Update file input label when file is selected
-uploadInput.onchange = (e) => {
-  const label = document.querySelector('.file-upload-btn');
-  if (e.target.files[0]) {
-    label.innerHTML = \`<span>📁</span> \${e.target.files[0].name}\`;
+// Helper function to toggle controls text
+function updateToggleText(isExpanded) {
+  const toggleText = document.getElementById('toggleText');
+  if (toggleText) {
+    toggleText.textContent = isExpanded ? 'Hide Controls' : 'Show Controls';
   }
-};
+}
 
-// Sound toggle handler
-soundToggle.onclick = () => {
-  player.muted = !player.muted;
-  updateSoundToggle();
-};
-
-player.onvolumechange = () => {
-  updateSoundToggle();
-};
-
+// Sound toggle functionality
 function updateSoundToggle() {
-  const icon = soundToggle.querySelector('.sound-icon');
+  const icon = document.getElementById('soundIcon');
   if (player.muted) {
     icon.textContent = '🔇';
     soundToggle.classList.remove('unmuted');
@@ -991,6 +994,11 @@ function updateSoundToggle() {
     soundToggle.classList.add('unmuted');
   }
 }
+
+soundToggle.onclick = () => {
+  player.muted = !player.muted;
+  updateSoundToggle();
+};
 
 // Speed slider handler
 speedSlider.oninput = () => {
@@ -1003,10 +1011,107 @@ speedSlider.oninput = () => {
 // Initialize sound toggle state
 updateSoundToggle();
 
+// === PARTICIPANTS MANAGEMENT ===
+function getUserColor(username) {
+  let hash = 0;
+  for (let i = 0; i < username.length; i++) {
+    hash = username.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = hash % 360;
+  return "hsl(" + hue + ", 70%, 60%)";
+}
+
+function getInitials(username) {
+  return username.substring(0, 2).toUpperCase();
+}
+
+function updateParticipantsList(participants) {
+  participantsList.innerHTML = '';
+  participantCount.textContent = participants.length;
+  
+  participants.forEach(username => {
+    const participantEl = document.createElement('div');
+    participantEl.className = 'participant' + (username === myUsername ? ' me' : '');
+    
+    const avatarEl = document.createElement('div');
+    avatarEl.className = 'participant-avatar';
+    avatarEl.style.backgroundColor = getUserColor(username);
+    avatarEl.textContent = getInitials(username);
+    
+    const nameEl = document.createElement('div');
+    nameEl.className = 'participant-name';
+    nameEl.textContent = username;
+    
+    participantEl.appendChild(avatarEl);
+    participantEl.appendChild(nameEl);
+    participantsList.appendChild(participantEl);
+  });
+}
+
+// Listen for participant updates
+socket.on("participants:update", updateParticipantsList);
+
+// === MOBILE TAB SWITCHING ===
+const videoTab = document.getElementById('videoTab');
+const chatTab = document.getElementById('chatTab');
+const videoContainer = document.getElementById('videoContainer');
+const chatContainer = document.getElementById('chatContainer');
+
+if (videoTab && chatTab) {
+  videoTab.onclick = () => {
+    videoTab.classList.add('active');
+    chatTab.classList.remove('active');
+    videoContainer.classList.add('active');
+    chatContainer.classList.remove('active');
+  };
+
+  chatTab.onclick = () => {
+    chatTab.classList.add('active');
+    videoTab.classList.remove('active');
+    chatContainer.classList.add('active');
+    videoContainer.classList.remove('active');
+  };
+}
+
+// === CONTROLS TOGGLE ===
+const controlsToggle = document.getElementById('controlsToggle');
+const headerControls = document.getElementById('headerControls');
+
+if (controlsToggle) {
+  controlsToggle.onclick = () => {
+    const isExpanded = headerControls.classList.toggle('expanded');
+    controlsToggle.classList.toggle('expanded', isExpanded);
+    updateToggleText(isExpanded);
+  };
+  
+  // Keyboard shortcut: 'C' key to toggle controls
+  document.addEventListener('keydown', (e) => {
+    // Only trigger if not typing in an input field
+    if (e.key === 'c' && !e.target.matches('input, textarea')) {
+      e.preventDefault();
+      const isExpanded = headerControls.classList.toggle('expanded');
+      controlsToggle.classList.toggle('expanded', isExpanded);
+      updateToggleText(isExpanded);
+    }
+  });
+  
+  // Initialize with correct text
+  updateToggleText(false);
+}
+
 // === VIDEO SYNC ===
 socket.emit("join", { room, username: myUsername });
 socket.on("video:state", applyState);
 socket.on("video:update", applyState);
+
+// Handle speed updates separately to avoid time jumps
+socket.on("video:speed-update", (data) => {
+  ignore = true;
+  player.playbackRate = data.playbackRate;
+  speedSlider.value = data.playbackRate;
+  speedValue.textContent = data.playbackRate + 'x';
+  ignore = false;
+});
 
 function applyState(s) {
   if (!s) return;
@@ -1061,11 +1166,22 @@ player.onseeked = () => {
   }, 300);
 };
 
+// FIX: Load video via URL - update local player immediately
 loadBtn.onclick = () => {
   const url = videoUrl.value.trim();
-  if (url) socket.emit("video:load", { room, url });
+  if (!url) return;
+  
+  // Update local player immediately
+  currentSource = url;
+  player.src = url;
+  player.load();
+  player.onloadedmetadata = () => {
+    // Now emit to sync with others
+    socket.emit("video:load", { room, url });
+  };
 };
 
+// Upload functionality already works correctly
 uploadBtn.onclick = async () => {
   const file = uploadInput.files[0];
   const key = adminKey.value.trim();
@@ -1140,6 +1256,8 @@ chatInput.onkeypress = (e) => {
 io.on("connection", (socket) => {
   socket.on("join", ({ room, username }) => {
     socket.join(room);
+    socket.username = username;
+    socket.currentRoom = room;
     
     // Initialize room if needed
     if (!rooms.has(room)) {
@@ -1148,27 +1266,43 @@ io.on("connection", (socket) => {
         isPlaying: false, 
         currentTime: 0,
         playbackRate: 1,
-        chatHistory: []
+        chatHistory: [],
+        participants: new Set(),
+        lastUpdateTime: Date.now()
       });
     }
     
     const roomData = rooms.get(room);
     
-    // Send video state
+    // Add user to participants
+    roomData.participants.add(username);
+    
+    // Calculate current time if video is playing
+    let calculatedTime = roomData.currentTime;
+    if (roomData.isPlaying && roomData.videoUrl) {
+      const elapsedSeconds = (Date.now() - roomData.lastUpdateTime) / 1000;
+      calculatedTime = roomData.currentTime + (elapsedSeconds * roomData.playbackRate);
+    }
+    
+    // Send video state with calculated time
     socket.emit("video:state", {
       videoUrl: roomData.videoUrl,
       isPlaying: roomData.isPlaying,
-      currentTime: roomData.currentTime,
+      currentTime: calculatedTime,
       playbackRate: roomData.playbackRate
     });
     
     // Send chat history
     socket.emit("chat:history", roomData.chatHistory);
     
+    // Send updated participant list to everyone in the room
+    const participantsList = Array.from(roomData.participants);
+    io.to(room).emit("participants:update", participantsList);
+    
     // Announce user joined
     const joinMsg = {
       username: "System",
-      message: `${username} joined the room`,
+      message: username + " joined the room",
       isSystem: true,
       timestamp: Date.now()
     };
@@ -1176,12 +1310,48 @@ io.on("connection", (socket) => {
     if (roomData.chatHistory.length > 100) roomData.chatHistory.shift();
     
     io.to(room).emit("chat:message", joinMsg);
+    
+    console.log("✅ " + username + " joined room " + room);
+  });
+  
+  socket.on("disconnect", () => {
+    if (socket.currentRoom && socket.username) {
+      const roomData = rooms.get(socket.currentRoom);
+      if (roomData) {
+        // Remove user from participants
+        roomData.participants.delete(socket.username);
+        
+        // Send updated participant list
+        const participantsList = Array.from(roomData.participants);
+        io.to(socket.currentRoom).emit("participants:update", participantsList);
+        
+        // Announce user left
+        const leaveMsg = {
+          username: "System",
+          message: socket.username + " left the room",
+          isSystem: true,
+          timestamp: Date.now()
+        };
+        roomData.chatHistory.push(leaveMsg);
+        if (roomData.chatHistory.length > 100) roomData.chatHistory.shift();
+        
+        io.to(socket.currentRoom).emit("chat:message", leaveMsg);
+        
+        console.log("👋 " + socket.username + " left room " + socket.currentRoom);
+        
+        // Clean up empty rooms
+        if (roomData.participants.size === 0) {
+          rooms.delete(socket.currentRoom);
+          console.log("🗑️  Deleted empty room " + socket.currentRoom);
+        }
+      }
+    }
   });
 
   socket.on("video:load", ({ room, url }) => {
     const s = rooms.get(room);
     if (!s) return;
-    Object.assign(s, { videoUrl: url, currentTime: 0, isPlaying: false });
+    Object.assign(s, { videoUrl: url, currentTime: 0, isPlaying: false, lastUpdateTime: Date.now() });
     io.to(room).emit("video:update", s);
   });
 
@@ -1190,6 +1360,7 @@ io.on("connection", (socket) => {
     if (!s) return;
     s.isPlaying = true;
     s.currentTime = time || 0;
+    s.lastUpdateTime = Date.now();
     socket.to(room).emit("video:update", s);
   });
 
@@ -1198,6 +1369,7 @@ io.on("connection", (socket) => {
     if (!s) return;
     s.isPlaying = false;
     s.currentTime = time || 0;
+    s.lastUpdateTime = Date.now();
     socket.to(room).emit("video:update", s);
   });
 
@@ -1205,14 +1377,25 @@ io.on("connection", (socket) => {
     const s = rooms.get(room);
     if (!s) return;
     s.currentTime = time;
+    s.lastUpdateTime = Date.now();
     socket.to(room).emit("video:update", s);
   });
 
   socket.on("video:speed", ({ room, speed }) => {
     const s = rooms.get(room);
     if (!s) return;
+    
+    // Calculate current position before changing speed
+    if (s.isPlaying && s.videoUrl) {
+      const elapsedSeconds = (Date.now() - s.lastUpdateTime) / 1000;
+      s.currentTime = s.currentTime + (elapsedSeconds * s.playbackRate);
+    }
+    
     s.playbackRate = speed;
-    socket.to(room).emit("video:update", s);
+    s.lastUpdateTime = Date.now();
+    
+    // Only send playbackRate change, not the full state to avoid time jumps
+    socket.to(room).emit("video:speed-update", { playbackRate: speed });
   });
 
   socket.on("chat:send", ({ room, username, message }) => {
