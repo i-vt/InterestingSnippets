@@ -392,10 +392,201 @@ input[type="file"] {
 }
 
 /* ===== MAIN CONTENT ===== */
-.main-content { display:flex; flex:1; overflow:hidden; }
-.video-section { flex:1; display:flex; flex-direction:column; align-items:center; padding:20px; overflow-y:auto; }
-.chat-section { width:320px; background:#0f0f11; border-left:1px solid rgba(255, 255, 255, 0.1); display:flex; flex-direction:column; }
-video { width:100%; max-width:900px; border-radius:12px; background:#000; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6); }
+.main-content { 
+  display:grid; 
+  grid-template-columns: 1fr 380px;
+  flex:1; 
+  overflow:hidden; 
+  min-height: 0;
+}
+
+.video-container {
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  min-height: 0;
+}
+
+.video-section { 
+  flex:1; 
+  display:flex; 
+  align-items:center; 
+  justify-content: center;
+  overflow:hidden;
+  min-height: 0;
+  background: #000;
+}
+
+video { 
+  width:100%; 
+  height:100%; 
+  object-fit: contain;
+}
+
+/* Video Controls Panel - Below Video */
+.video-controls-panel {
+  background: linear-gradient(135deg, #1a1a1d 0%, #0f0f11 100%);
+  border-top: 2px solid rgba(255, 255, 255, 0.1);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.control-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #a1a1aa;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Sound Toggle Button */
+.sound-control {
+  flex-shrink: 0;
+}
+
+.sound-toggle {
+  padding: 10px 18px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  min-width: 70px;
+  justify-content: center;
+}
+
+.sound-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.sound-toggle:active {
+  transform: translateY(0);
+}
+
+.sound-toggle.muted {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.sound-toggle.unmuted {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+/* Speed Control */
+.speed-control {
+  flex: 1;
+  min-width: 260px;
+  max-width: 550px;
+}
+
+.speed-slider-container {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+}
+
+#speedSlider {
+  flex: 1;
+  height: 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+#speedSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(59, 130, 246, 0.6);
+  transition: all 0.2s ease;
+}
+
+#speedSlider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.8);
+}
+
+#speedSlider::-webkit-slider-thumb:active {
+  transform: scale(1.1);
+}
+
+#speedSlider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 3px 10px rgba(59, 130, 246, 0.6);
+  transition: all 0.2s ease;
+}
+
+#speedSlider::-moz-range-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.8);
+}
+
+#speedSlider::-moz-range-thumb:active {
+  transform: scale(1.1);
+}
+
+#speedSlider::-webkit-slider-runnable-track {
+  height: 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+#speedSlider::-moz-range-track {
+  height: 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.speed-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #3b82f6;
+  min-width: 52px;
+  text-align: right;
+}
+
+.chat-section { 
+  background:#0f0f11; 
+  border-left:1px solid rgba(255, 255, 255, 0.1); 
+  display:flex; 
+  flex-direction:column;
+  min-height: 0;
+}
 
 #unmuteBtn { 
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); 
@@ -475,27 +666,125 @@ video { width:100%; max-width:900px; border-radius:12px; background:#000; box-sh
     flex-direction: row;
     flex-wrap: wrap;
   }
+  
+  .control-section {
+    max-width: 100%;
+  }
 }
 
 @media (max-width: 768px) {
+  .header-container {
+    padding: 0 16px;
+  }
+  
   .header-top {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
+    padding: 12px 0;
+    gap: 10px;
+  }
+  
+  .brand {
+    gap: 10px;
+  }
+  
+  .logo {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+  
+  .brand-title {
+    font-size: 16px;
+  }
+  
+  .brand-subtitle {
+    font-size: 10px;
   }
   
   .room-info {
-    width: 100%;
-    justify-content: center;
+    padding: 6px 12px;
+  }
+  
+  .room-label {
+    font-size: 11px;
+  }
+  
+  .room-id {
+    font-size: 12px;
+  }
+  
+  .header-controls {
+    padding: 12px 0;
+    gap: 12px;
+  }
+  
+  .section-label {
+    font-size: 10px;
+  }
+  
+  input[type="text"],
+  input[type="password"] {
+    font-size: 14px;
+    padding: 9px 10px 9px 32px;
+  }
+  
+  .btn {
+    padding: 9px 16px;
+    font-size: 12px;
+  }
+  
+  .file-upload-btn {
+    padding: 9px 16px;
+    font-size: 12px;
+  }
+  
+  .input-group {
+    gap: 6px;
   }
   
   .main-content { 
-    flex-direction:column; 
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto auto;
+  }
+  
+  .video-container {
+    min-height: 300px;
+  }
+  
+  .video-controls-panel {
+    padding: 12px 16px;
+    gap: 12px;
+  }
+  
+  .control-group {
+    width: 100%;
+    gap: 10px;
+  }
+  
+  .sound-control {
+    justify-content: flex-start;
+  }
+  
+  .sound-toggle {
+    padding: 9px 16px;
+    font-size: 16px;
+    min-width: 65px;
+  }
+  
+  .control-label {
+    font-size: 12px;
+  }
+  
+  .speed-control {
+    max-width: none;
+  }
+  
+  .speed-value {
+    font-size: 14px;
+    min-width: 45px;
   }
   
   .chat-section { 
-    width:100%; 
-    max-height:300px; 
+    max-height:320px;
     border-left:none; 
     border-top:1px solid rgba(255, 255, 255, 0.1); 
   }
@@ -505,6 +794,41 @@ video { width:100%; max-width:900px; border-radius:12px; background:#000; box-sh
   }
   
   .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Extra mobile optimization */
+@media (max-width: 480px) {
+  .header-container {
+    padding: 0 12px;
+  }
+  
+  .header-top {
+    padding: 10px 0;
+  }
+  
+  .logo {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+  
+  .brand-title {
+    font-size: 14px;
+  }
+  
+  .brand-subtitle {
+    display: none;
+  }
+  
+  .video-controls-panel {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  
+  .sound-toggle {
     width: 100%;
     justify-content: center;
   }
@@ -534,8 +858,8 @@ video { width:100%; max-width:900px; border-radius:12px; background:#000; box-sh
       <div class="brand">
         <div class="logo">🎬</div>
         <div class="brand-text">
-          <h1 class="brand-title">StreamSync</h1>
-          <div class="brand-subtitle">Enterprise Video Platform</div>
+          <h1 class="brand-title">WatchVideosTogether.js</h1>
+          <div class="brand-subtitle">Made with Love ❤️</div>
         </div>
       </div>
       <div class="room-info">
@@ -579,9 +903,26 @@ video { width:100%; max-width:900px; border-radius:12px; background:#000; box-sh
 </header>
 
 <div class="main-content">
-  <div class="video-section">
-    <video id="player" controls muted></video>
-    <button id="unmuteBtn">🔇 Click to Enable Sound</button>
+  <div class="video-container">
+    <div class="video-section">
+      <video id="player" controls muted></video>
+    </div>
+    <div class="video-controls-panel">
+      <div class="control-group sound-control">
+        <button id="soundToggle" class="sound-toggle muted">
+          <span class="sound-icon">🔇</span>
+        </button>
+      </div>
+      <div class="control-group speed-control">
+        <label class="control-label">
+          <span>⚡ Speed:</span>
+        </label>
+        <div class="speed-slider-container">
+          <input type="range" id="speedSlider" min="0.25" max="3" step="0.25" value="1">
+          <span class="speed-value" id="speedValue">1x</span>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="chat-section">
     <div class="chat-header">💬 Live Chat</div>
@@ -605,7 +946,9 @@ const loadBtn = document.getElementById("loadBtn");
 const uploadBtn = document.getElementById("uploadBtn");
 const uploadInput = document.getElementById("uploadInput");
 const adminKey = document.getElementById("adminKey");
-const unmuteBtn = document.getElementById("unmuteBtn");
+const soundToggle = document.getElementById("soundToggle");
+const speedSlider = document.getElementById("speedSlider");
+const speedValue = document.getElementById("speedValue");
 const chatInput = document.getElementById("chatInput");
 const sendBtn = document.getElementById("sendBtn");
 const chatMessages = document.getElementById("chatMessages");
@@ -626,15 +969,39 @@ uploadInput.onchange = (e) => {
   }
 };
 
-// Unmute handler
-unmuteBtn.onclick = () => {
-  player.muted = false;
-  unmuteBtn.style.display = "none";
+// Sound toggle handler
+soundToggle.onclick = () => {
+  player.muted = !player.muted;
+  updateSoundToggle();
 };
 
 player.onvolumechange = () => {
-  if (!player.muted) unmuteBtn.style.display = "none";
+  updateSoundToggle();
 };
+
+function updateSoundToggle() {
+  const icon = soundToggle.querySelector('.sound-icon');
+  if (player.muted) {
+    icon.textContent = '🔇';
+    soundToggle.classList.remove('unmuted');
+    soundToggle.classList.add('muted');
+  } else {
+    icon.textContent = '🔊';
+    soundToggle.classList.remove('muted');
+    soundToggle.classList.add('unmuted');
+  }
+}
+
+// Speed slider handler
+speedSlider.oninput = () => {
+  const speed = parseFloat(speedSlider.value);
+  speedValue.textContent = speed + 'x';
+  player.playbackRate = speed;
+  socket.emit("video:speed", { room, speed });
+};
+
+// Initialize sound toggle state
+updateSoundToggle();
 
 // === VIDEO SYNC ===
 socket.emit("join", { room, username: myUsername });
@@ -653,11 +1020,21 @@ function applyState(s) {
     player.load();
     player.onloadedmetadata = () => {
       player.currentTime = s.currentTime || 0;
+      if (s.playbackRate !== undefined) {
+        player.playbackRate = s.playbackRate;
+        speedSlider.value = s.playbackRate;
+        speedValue.textContent = s.playbackRate + 'x';
+      }
       if (s.isPlaying) player.play().catch(() => {});
     };
   } else {
     if (Math.abs(player.currentTime - (s.currentTime || 0)) > 0.5)
       player.currentTime = s.currentTime || 0;
+    if (s.playbackRate !== undefined && Math.abs(player.playbackRate - s.playbackRate) > 0.01) {
+      player.playbackRate = s.playbackRate;
+      speedSlider.value = s.playbackRate;
+      speedValue.textContent = s.playbackRate + 'x';
+    }
     if (s.isPlaying && player.paused)
       player.play().catch(() => {});
     else if (!s.isPlaying && !player.paused)
@@ -770,6 +1147,7 @@ io.on("connection", (socket) => {
         videoUrl: "", 
         isPlaying: false, 
         currentTime: 0,
+        playbackRate: 1,
         chatHistory: []
       });
     }
@@ -780,7 +1158,8 @@ io.on("connection", (socket) => {
     socket.emit("video:state", {
       videoUrl: roomData.videoUrl,
       isPlaying: roomData.isPlaying,
-      currentTime: roomData.currentTime
+      currentTime: roomData.currentTime,
+      playbackRate: roomData.playbackRate
     });
     
     // Send chat history
@@ -826,6 +1205,13 @@ io.on("connection", (socket) => {
     const s = rooms.get(room);
     if (!s) return;
     s.currentTime = time;
+    socket.to(room).emit("video:update", s);
+  });
+
+  socket.on("video:speed", ({ room, speed }) => {
+    const s = rooms.get(room);
+    if (!s) return;
+    s.playbackRate = speed;
     socket.to(room).emit("video:update", s);
   });
 
