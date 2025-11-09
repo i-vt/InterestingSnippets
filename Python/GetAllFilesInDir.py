@@ -1,3 +1,5 @@
+import os
+
 def get_all_dirs(start_dir: str = "/"):
     pages = []
     for root, dirs, files in os.walk(start_dir):
