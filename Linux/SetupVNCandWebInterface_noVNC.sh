@@ -15,14 +15,14 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration (can be overridden by environment variables)
-TARGET_USER="${TARGET_USER:-${SUDO_USER:-$(whoami)}}"
+TARGET_USER="${TARGET_USER:-vncuser}"
 VNC_PASSWORD="${VNC_PASSWORD:-}"
 WEB_PORT="${WEB_PORT:-6080}"
 VNC_GEOMETRY="${VNC_GEOMETRY:-1280x800}"
 DESKTOP_ENV="${DESKTOP_ENV:-minimal}"  # minimal, xfce4, lxde, mate
 
-# Derived variables
-USER_HOME="$(getent passwd "$TARGET_USER" | cut -d: -f6)"
+# Derived variables (will be set after user creation)
+USER_HOME=""
 
 # Function to print colored output
 print_status() {
@@ -68,13 +68,41 @@ detect_os() {
     fi
 }
 
-# Function to validate user
-validate_user() {
-    if ! id "$TARGET_USER" &>/dev/null; then
-        print_error "User '$TARGET_USER' does not exist"
-        exit 1
+# Function to create vncuser with auto-generated password
+create_vncuser() {
+    print_status "Creating vncuser account..."
+    
+    # Check if user already exists
+    if id "$TARGET_USER" &>/dev/null; then
+        print_warning "User '$TARGET_USER' already exists"
+        USER_HOME="$(getent passwd "$TARGET_USER" | cut -d: -f6)"
+        print_status "Using existing home directory: $USER_HOME"
+    else
+        # Generate random password using uuidgen
+        if ! command -v uuidgen &>/dev/null; then
+            print_status "Installing uuid-runtime for password generation..."
+            apt-get update -qq
+            apt-get install -y uuid-runtime
+        fi
+        
+        SYSTEM_PASSWORD=$(uuidgen | head -c 8)
+        
+        # Create user with home directory
+        useradd -m -s /bin/bash "$TARGET_USER"
+        
+        # Set the system password
+        echo "$TARGET_USER:$SYSTEM_PASSWORD" | chpasswd
+        
+        USER_HOME="$(getent passwd "$TARGET_USER" | cut -d: -f6)"
+        
+        print_success "User '$TARGET_USER' created successfully"
+        print_success "System password: $SYSTEM_PASSWORD"
+        echo "$SYSTEM_PASSWORD" > /root/vncuser_system_password.txt
+        chmod 600 /root/vncuser_system_password.txt
+        print_status "System password saved to: /root/vncuser_system_password.txt"
     fi
     
+    # Verify home directory exists
     if [[ ! -d "$USER_HOME" ]]; then
         print_error "Home directory '$USER_HOME' does not exist"
         exit 1
@@ -115,13 +143,13 @@ install_base_packages() {
         "curl"
         "wget"
         "gnupg2"
-        "software-properties-common"
         "apt-transport-https"
         "ca-certificates"
         "lsb-release"
         "systemd"
         "dbus"
         "dbus-x11"
+        "uuid-runtime"
     )
     
     apt-get install -y "${base_packages[@]}"
@@ -224,25 +252,66 @@ install_additional_packages() {
     print_success "Additional packages installed"
 }
 
+# Function to fix TigerVNC migration issue
+fix_tigervnc_migration() {
+    print_status "Fixing TigerVNC migration issue..."
+    
+    # Create the new config directory structure
+    sudo -u "$TARGET_USER" mkdir -p "$USER_HOME/.config/tigervnc"
+    
+    # If old .vnc directory exists, migrate settings
+    if [[ -d "$USER_HOME/.vnc" ]]; then
+        print_status "Migrating existing VNC configuration..."
+        # Copy passwd file if it exists
+        if [[ -f "$USER_HOME/.vnc/passwd" ]]; then
+            sudo -u "$TARGET_USER" cp "$USER_HOME/.vnc/passwd" "$USER_HOME/.config/tigervnc/passwd"
+        fi
+        # Copy xstartup if it exists
+        if [[ -f "$USER_HOME/.vnc/xstartup" ]]; then
+            sudo -u "$TARGET_USER" cp "$USER_HOME/.vnc/xstartup" "$USER_HOME/.config/tigervnc/xstartup"
+        fi
+    else
+        # Create .vnc directory as well for logs
+        sudo -u "$TARGET_USER" mkdir -p "$USER_HOME/.vnc"
+    fi
+    
+    # Set proper permissions
+    chown -R "$TARGET_USER:$TARGET_USER" "$USER_HOME/.vnc" "$USER_HOME/.config/tigervnc"
+    chmod 700 "$USER_HOME/.vnc" "$USER_HOME/.config/tigervnc"
+    
+    print_success "TigerVNC configuration directories prepared"
+}
+
 # Function to setup VNC password
 setup_vnc_password() {
     print_status "Setting up VNC password..."
     
-    # Create .vnc directory
-    install -d -m 700 -o "$TARGET_USER" -g "$TARGET_USER" "$USER_HOME/.vnc"
+    # Ensure directories exist with proper permissions
+    fix_tigervnc_migration
     
     if [[ -z "$VNC_PASSWORD" ]]; then
-        print_status "No VNC_PASSWORD provided. Please set a VNC password for user '$TARGET_USER':"
-        sudo -u "$TARGET_USER" bash -c "cd '$USER_HOME' && vncpasswd"
-    else
-        # Non-interactive password setup
-        print_status "Setting VNC password non-interactively"
-        local password_hash
-        password_hash=$(sudo -u "$TARGET_USER" bash -c "printf '%s\n' '$VNC_PASSWORD' | vncpasswd -f")
-        printf '%s' "$password_hash" > "$USER_HOME/.vnc/passwd"
-        chmod 600 "$USER_HOME/.vnc/passwd"
-        chown "$TARGET_USER:$TARGET_USER" "$USER_HOME/.vnc/passwd"
+        # Auto-generate VNC password using uuidgen
+        VNC_PASSWORD=$(uuidgen | head -c 8)
+        print_status "Auto-generated VNC password: $VNC_PASSWORD"
+        echo "$VNC_PASSWORD" > /root/vncuser_vnc_password.txt
+        chmod 600 /root/vncuser_vnc_password.txt
+        print_status "VNC password saved to: /root/vncuser_vnc_password.txt"
     fi
+    
+    # Non-interactive password setup - write to both locations
+    print_status "Setting VNC password non-interactively"
+    local password_hash
+    password_hash=$(sudo -u "$TARGET_USER" bash -c "printf '%s\n' '$VNC_PASSWORD' | vncpasswd -f")
+    
+    # Save to new location
+    printf '%s' "$password_hash" > "$USER_HOME/.config/tigervnc/passwd"
+    chmod 600 "$USER_HOME/.config/tigervnc/passwd"
+    chown "$TARGET_USER:$TARGET_USER" "$USER_HOME/.config/tigervnc/passwd"
+    
+    # Also save to old location for compatibility
+    printf '%s' "$password_hash" > "$USER_HOME/.vnc/passwd"
+    chmod 600 "$USER_HOME/.vnc/passwd"
+    chown "$TARGET_USER:$TARGET_USER" "$USER_HOME/.vnc/passwd"
     
     print_success "VNC password configured"
 }
@@ -251,7 +320,8 @@ setup_vnc_password() {
 create_xstartup_script() {
     print_status "Creating bulletproof xstartup script..."
     
-    local xstartup_file="$USER_HOME/.vnc/xstartup"
+    # Create in new location
+    local xstartup_file="$USER_HOME/.config/tigervnc/xstartup"
     
     cat > "$xstartup_file" <<'EOF'
 #!/bin/bash
@@ -508,6 +578,11 @@ EOF
     chown "$TARGET_USER:$TARGET_USER" "$xstartup_file"
     chmod +x "$xstartup_file"
     
+    # Also create in old location for compatibility
+    cp "$xstartup_file" "$USER_HOME/.vnc/xstartup"
+    chown "$TARGET_USER:$TARGET_USER" "$USER_HOME/.vnc/xstartup"
+    chmod +x "$USER_HOME/.vnc/xstartup"
+    
     print_success "Bulletproof xstartup script created"
 }
 
@@ -520,6 +595,9 @@ setup_display_and_ports() {
     for old_display in {1..10}; do
         sudo -u "$TARGET_USER" bash -c "vncserver -kill :$old_display" 2>/dev/null || true
     done
+    
+    # Clean up lock files
+    rm -f /tmp/.X*-lock /tmp/.X11-unix/X* 2>/dev/null || true
     
     # Find available display
     DISPLAY_NUM=$(find_available_display)
@@ -538,6 +616,7 @@ test_vnc_manual() {
     # Clean up any existing locks or sessions
     rm -f "/tmp/.X$DISPLAY_NUM-lock" "/tmp/.X11-unix/X$DISPLAY_NUM" 2>/dev/null || true
     
+    # Switch to user and start VNC
     if sudo -u "$TARGET_USER" bash -c "cd '$USER_HOME' && vncserver :$DISPLAY_NUM -geometry $VNC_GEOMETRY -localhost yes -SecurityTypes VncAuth -verbose"; then
         print_success "VNC started successfully on display :$DISPLAY_NUM"
         
@@ -802,6 +881,11 @@ display_final_info() {
     echo "  Web Port:            $WEB_PORT"
     echo "  Geometry:            $VNC_GEOMETRY"
     echo
+    echo "Credentials:"
+    echo "  System User:         $TARGET_USER"
+    echo "  System Password:     (saved in /root/vncuser_system_password.txt)"
+    echo "  VNC Password:        (saved in /root/vncuser_vnc_password.txt)"
+    echo
     echo "Access Information:"
     echo "  Web Interface:       http://$ip4:$WEB_PORT/vnc.html"
     echo "  Direct VNC:          $ip4:$VNC_PORT"
@@ -829,8 +913,8 @@ display_final_info() {
     echo "  System noVNC Logs:   journalctl -u novnc-proxy.service -f"
     echo "  Check Processes:     ps aux | grep vnc"
     echo "  Check Ports:         ss -tlnp | grep -E ':(5902|6080)'"
-    echo "  Manual VNC Test:     cd $USER_HOME && vncserver :$DISPLAY_NUM
-  Kill Manual Test:    vncserver -kill :$DISPLAY_NUM"
+    echo "  Manual VNC Test:     sudo -u $TARGET_USER bash -c 'cd $USER_HOME && vncserver :$DISPLAY_NUM'"
+    echo "  Kill Manual Test:    sudo -u $TARGET_USER vncserver -kill :$DISPLAY_NUM"
     echo "=================================================================="
 }
 
@@ -844,7 +928,9 @@ main() {
     # Preliminary checks
     check_root
     detect_os
-    validate_user
+    
+    # Create vncuser first
+    create_vncuser
     
     # Installation steps
     update_system
@@ -870,6 +956,9 @@ main() {
             print_success "Installation completed successfully!"
             echo
             print_status "The VNC server is now running with these improvements:"
+            echo "  ✓ Non-sudoer user 'vncuser' created"
+            echo "  ✓ Auto-generated passwords saved securely"
+            echo "  ✓ TigerVNC migration issue fixed"
             echo "  ✓ Bulletproof xstartup script with error recovery"
             echo "  ✓ Multiple window manager fallbacks"
             echo "  ✓ Robust systemd service configuration"
