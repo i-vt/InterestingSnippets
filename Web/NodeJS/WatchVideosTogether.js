@@ -16,10 +16,15 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
+// === CRITICAL: Configure server timeouts for large file uploads ===
+server.timeout = 0; // Disable timeout (or set to very large value like 2 * 60 * 60 * 1000 for 2 hours)
+server.keepAliveTimeout = 0; // Disable keep-alive timeout
+server.headersTimeout = 0; // Disable headers timeout
+server.requestTimeout = 0; // Disable request timeout (Node.js 18+)
+
 // === SETUP ===
 const UPLOADS_DIR = path.join(__dirname, "uploads");
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR);
-app.use("/uploads", express.static(UPLOADS_DIR));
 app.use(cookieParser());
 
 const ADMIN_KEY = uuidv4();
@@ -44,7 +49,7 @@ function getUserColor(username) {
   return `hsl(${hue}, 70%, 60%)`;
 }
 
-// === Multer (video uploads) ===
+// === Multer (video uploads) - CONFIGURED FOR LARGE FILES ===
 const storage = multer.diskStorage({
   destination: (_, __, cb) => cb(null, UPLOADS_DIR),
   filename: (_, file, cb) => {
@@ -52,7 +57,14 @@ const storage = multer.diskStorage({
     cb(null, uuidv4() + ext);
   },
 });
-const upload = multer({ storage });
+
+// Configure multer with larger limits for multi-GB files
+const upload = multer({ 
+  storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 * 1024, // 10GB limit (adjust as needed)
+  }
+});
 
 // === In-memory shared rooms ===
 const rooms = new Map();
@@ -61,23 +73,84 @@ const rooms = new Map();
 const sessions = new Map(); // sessionId -> username
 const MAX_SESSIONS = 1000;
 
-// === Upload route ===
-app.post("/upload", upload.single("video"), (req, res) => {
-  if (req.query.key !== ADMIN_KEY) return res.status(403).send("❌ Invalid admin key");
-  if (!req.file) return res.status(400).send("❌ No video file uploaded");
+// === Upload route - WITH COMPREHENSIVE TIMEOUT AND ERROR HANDLING ===
+app.post("/upload", (req, res, next) => {
+  console.log("ðŸ“¥ Upload started - Setting timeouts...");
+  
+  // Set VERY long timeouts for large file uploads (4 hours)
+  const UPLOAD_TIMEOUT = 4 * 60 * 60 * 1000;
+  
+  req.setTimeout(UPLOAD_TIMEOUT, () => {
+    console.error("âŒ Request timeout after", UPLOAD_TIMEOUT / 1000, "seconds");
+  });
+  
+  res.setTimeout(UPLOAD_TIMEOUT, () => {
+    console.error("âŒ Response timeout after", UPLOAD_TIMEOUT / 1000, "seconds");
+  });
+  
+  // Socket timeout
+  if (req.socket) {
+    req.socket.setTimeout(UPLOAD_TIMEOUT, () => {
+      console.error("âŒ Socket timeout after", UPLOAD_TIMEOUT / 1000, "seconds");
+    });
+  }
+  
+  // Connection monitoring
+  req.on('close', () => {
+    console.log("âš ï¸  Request connection closed");
+  });
+  
+  req.on('aborted', () => {
+    console.error("âŒ Request aborted by client");
+  });
+  
+  req.on('error', (err) => {
+    console.error("âŒ Request error:", err);
+  });
+  
+  // Track upload progress
+  let receivedBytes = 0;
+  req.on('data', (chunk) => {
+    receivedBytes += chunk.length;
+    if (receivedBytes % (50 * 1024 * 1024) === 0) { // Log every 50MB
+      console.log(`ðŸ“Š Received ${(receivedBytes / 1024 / 1024).toFixed(2)} MB...`);
+    }
+  });
+  
+  next();
+}, upload.single("video"), (req, res) => {
+  if (req.query.key !== ADMIN_KEY) {
+    console.error("âŒ Invalid admin key provided");
+    return res.status(403).send("âŒ Invalid admin key");
+  }
+  
+  if (!req.file) {
+    console.error("âŒ No file in request");
+    return res.status(400).send("âŒ No video file uploaded");
+  }
 
   const filePath = path.join(UPLOADS_DIR, req.file.filename);
   if (!fs.existsSync(filePath)) {
-    console.error("🚫 File missing right after upload:", filePath);
+    console.error("ðŸš« File missing right after upload:", filePath);
     return res.status(500).send("Internal error saving file");
   }
 
   const fileUrl = `/uploads/${req.file.filename}`;
-  console.log("✅ Uploaded:", fileUrl);
+  console.log("âœ… Upload complete:", fileUrl, `(${(req.file.size / 1024 / 1024).toFixed(2)} MB)`);
   res.json({ url: fileUrl });
+}, (err, req, res, next) => {
+  // Error handler for multer
+  console.error("âŒ Multer/Upload error:", err.message);
+  console.error("Error details:", err);
+  
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).send('File too large');
+  }
+  
+  res.status(500).send('Upload error: ' + err.message);
 });
 
-// === Video streaming with Range support ===
+// === Video streaming with FIXED Range support ===
 app.get("/uploads/:filename", (req, res) => {
   const filePath = path.join(UPLOADS_DIR, req.params.filename);
   if (!fs.existsSync(filePath)) return res.status(404).send("File not found");
@@ -91,31 +164,46 @@ app.get("/uploads/:filename", (req, res) => {
     res.writeHead(200, {
       "Content-Length": fileSize,
       "Content-Type": mimeType,
+      "Accept-Ranges": "bytes",
     });
     fs.createReadStream(filePath).pipe(res);
     return;
   }
 
-  const [startStr, endStr] = range.replace(/bytes=/, "").split("-");
-  const start = parseInt(startStr, 10);
-  const end = endStr ? parseInt(endStr, 10) : fileSize - 1;
-  if (start >= fileSize || end >= fileSize) {
-    res.writeHead(416, { "Content-Range": `bytes */${fileSize}` });
+  // Parse range header
+  const parts = range.replace(/bytes=/, "").split("-");
+  const start = parseInt(parts[0], 10);
+  const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+  // FIXED: Proper range validation
+  if (isNaN(start) || isNaN(end) || start < 0 || end >= fileSize || start > end) {
+    console.error(`Invalid range request: ${range} for file size ${fileSize}`);
+    res.writeHead(416, { 
+      "Content-Range": `bytes */${fileSize}`,
+      "Content-Type": mimeType
+    });
     return res.end();
   }
 
   const chunkSize = end - start + 1;
   const fileStream = fs.createReadStream(filePath, { start, end });
+  
   res.writeHead(206, {
     "Content-Range": `bytes ${start}-${end}/${fileSize}`,
     "Accept-Ranges": "bytes",
     "Content-Length": chunkSize,
     "Content-Type": mimeType,
   });
+  
   fileStream.pipe(res);
+  
   fileStream.on("error", (err) => {
     console.error("Stream error:", err);
-    res.end();
+    if (!res.headersSent) {
+      res.status(500).end();
+    } else {
+      res.end();
+    }
   });
 });
 
@@ -357,6 +445,38 @@ header {
   gap: 16px;
 }
 
+/* Upload Progress */
+.upload-progress {
+  display: none;
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 11px;
+  color: #a1a1aa;
+  text-align: center;
+}
+
 /* Participants Section */
 .participants-section {
   background: rgba(0, 0, 0, 0.3);
@@ -524,6 +644,12 @@ button:hover {
 button:active {
   transform: translateY(0);
   box-shadow: 0 1px 4px rgba(59, 130, 246, 0.3);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* Speed Control */
@@ -855,10 +981,10 @@ video {
   <div class="header-container">
     <div class="header-top">
       <div class="brand">
-        <div class="logo">🎬</div>
+        <div class="logo">ðŸŽ¬</div>
         <div class="brand-text">
           <div class="brand-title">WatchVideosTogether.js</div>
-          <div class="brand-subtitle">Made with Love ❤️</div>
+          <div class="brand-subtitle">Made with Love â¤ï¸</div>
         </div>
       </div>
       <div class="room-info">
@@ -868,12 +994,12 @@ video {
     </div>
     
     <div class="mobile-tabs">
-      <button class="mobile-tab active" id="videoTab">📹 Video</button>
-      <button class="mobile-tab" id="chatTab">💬 Chat</button>
+      <button class="mobile-tab active" id="videoTab">ðŸ“¹ Video</button>
+      <button class="mobile-tab" id="chatTab">ðŸ’¬ Chat</button>
     </div>
     
     <button class="controls-toggle" id="controlsToggle">
-      <span>⚙️</span>
+      <span>âš™ï¸</span>
       <span id="toggleText">Show Controls</span>
     </button>
     
@@ -882,7 +1008,7 @@ video {
         <!-- Participants Section -->
         <div class="participants-section">
           <div class="participants-header">
-            👥 Participants
+            ðŸ‘¥ Participants
             <span class="participant-count" id="participantCount">0</span>
           </div>
           <div class="participants-list" id="participantsList">
@@ -891,7 +1017,7 @@ video {
         </div>
         
         <div class="control-group">
-          <label class="control-label">🔗 Load Video URL</label>
+          <label class="control-label">ðŸ”— Load Video URL</label>
           <div class="input-group">
             <input type="text" id="videoUrl" placeholder="https://example.com/video.mp4">
             <button id="loadBtn">Load</button>
@@ -899,13 +1025,19 @@ video {
         </div>
         
         <div class="control-group">
-          <label class="control-label">📤 Upload Video (Admin)</label>
+          <label class="control-label">ðŸ“¤ Upload Video (Admin)</label>
           <div class="input-group">
             <input type="text" id="adminKey" placeholder="Admin Key">
           </div>
           <div class="input-group">
             <input type="file" id="uploadInput" accept="video/*">
             <button id="uploadBtn">Upload</button>
+          </div>
+          <div class="upload-progress" id="uploadProgress">
+            <div class="progress-bar">
+              <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">Uploading...</div>
           </div>
         </div>
         
@@ -916,7 +1048,7 @@ video {
         </div>
         
         <div class="sound-toggle" id="soundToggle">
-          <span class="sound-icon" id="soundIcon">🔊</span>
+          <span class="sound-icon" id="soundIcon">ðŸ”Š</span>
           <span class="sound-label">Click to toggle sound</span>
         </div>
       </div>
@@ -945,7 +1077,7 @@ video {
 const socket = io();
 const urlParams = new URLSearchParams(location.search);
 const room = urlParams.get("room") || "default";
-const myUsername = "${username}";
+const myUsername = ${JSON.stringify(username)};
 
 // Display room ID
 document.getElementById("roomId").textContent = room;
@@ -966,6 +1098,9 @@ const chatInput = document.getElementById("chatInput");
 const sendBtn = document.getElementById("sendBtn");
 const participantsList = document.getElementById("participantsList");
 const participantCount = document.getElementById("participantCount");
+const uploadProgress = document.getElementById("uploadProgress");
+const progressFill = document.getElementById("progressFill");
+const progressText = document.getElementById("progressText");
 
 // State
 let ignore = false;
@@ -985,11 +1120,11 @@ function updateToggleText(isExpanded) {
 function updateSoundToggle() {
   const icon = document.getElementById('soundIcon');
   if (player.muted) {
-    icon.textContent = '🔇';
+    icon.textContent = 'ðŸ”‡';
     soundToggle.classList.remove('unmuted');
     soundToggle.classList.add('muted');
   } else {
-    icon.textContent = '🔊';
+    icon.textContent = 'ðŸ”Š';
     soundToggle.classList.remove('muted');
     soundToggle.classList.add('unmuted');
   }
@@ -1181,7 +1316,7 @@ loadBtn.onclick = () => {
   };
 };
 
-// Upload functionality already works correctly
+// Upload functionality with progress tracking for large files
 uploadBtn.onclick = async () => {
   const file = uploadInput.files[0];
   const key = adminKey.value.trim();
@@ -1190,22 +1325,69 @@ uploadBtn.onclick = async () => {
   const form = new FormData();
   form.append("video", file);
 
-  const res = await fetch("/upload?key=" + encodeURIComponent(key), {
-    method: "POST",
-    body: form,
-  });
-  if (!res.ok) return alert(await res.text());
+  // Show progress bar
+  uploadProgress.style.display = 'block';
+  uploadBtn.disabled = true;
+  progressFill.style.width = '0%';
+  progressText.textContent = 'Uploading... 0%';
 
-  const data = await res.json();
-  const videoPath = data.url;
-  console.log("Uploaded:", videoPath);
-
-  player.src = videoPath;
-  player.load();
-  player.onloadedmetadata = () => {
-    currentSource = videoPath;
-    socket.emit("video:load", { room, url: videoPath });
-  };
+  try {
+    const xhr = new XMLHttpRequest();
+    
+    // CRITICAL: Remove any XHR timeout to allow large uploads
+    xhr.timeout = 0;
+    
+    // Track upload progress
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable) {
+        const percentComplete = (e.loaded / e.total) * 100;
+        progressFill.style.width = percentComplete + '%';
+        progressText.textContent = \`Uploading... \${percentComplete.toFixed(1)}% (\${(e.loaded / 1024 / 1024).toFixed(1)} MB / \${(e.total / 1024 / 1024).toFixed(1)} MB)\`;
+      }
+    });
+    
+    xhr.addEventListener('load', () => {
+      if (xhr.status === 200) {
+        const data = JSON.parse(xhr.responseText);
+        const videoPath = data.url;
+        console.log("Uploaded:", videoPath);
+        
+        progressText.textContent = 'Upload complete! Loading video...';
+        
+        player.src = videoPath;
+        player.load();
+        player.onloadedmetadata = () => {
+          currentSource = videoPath;
+          socket.emit("video:load", { room, url: videoPath });
+          
+          // Hide progress after a delay
+          setTimeout(() => {
+            uploadProgress.style.display = 'none';
+            uploadBtn.disabled = false;
+            uploadInput.value = '';
+          }, 2000);
+        };
+      } else {
+        alert(xhr.responseText || 'Upload failed');
+        uploadProgress.style.display = 'none';
+        uploadBtn.disabled = false;
+      }
+    });
+    
+    xhr.addEventListener('error', () => {
+      alert('Upload failed: Network error');
+      uploadProgress.style.display = 'none';
+      uploadBtn.disabled = false;
+    });
+    
+    xhr.open('POST', '/upload?key=' + encodeURIComponent(key));
+    xhr.send(form);
+    
+  } catch (error) {
+    alert('Upload failed: ' + error.message);
+    uploadProgress.style.display = 'none';
+    uploadBtn.disabled = false;
+  }
 };
 
 // === CHAT ===
@@ -1311,7 +1493,7 @@ io.on("connection", (socket) => {
     
     io.to(room).emit("chat:message", joinMsg);
     
-    console.log("✅ " + username + " joined room " + room);
+    console.log("âœ… " + username + " joined room " + room);
   });
   
   socket.on("disconnect", () => {
@@ -1337,12 +1519,12 @@ io.on("connection", (socket) => {
         
         io.to(socket.currentRoom).emit("chat:message", leaveMsg);
         
-        console.log("👋 " + socket.username + " left room " + socket.currentRoom);
+        console.log("ðŸ‘‹ " + socket.username + " left room " + socket.currentRoom);
         
         // Clean up empty rooms
         if (roomData.participants.size === 0) {
           rooms.delete(socket.currentRoom);
-          console.log("🗑️  Deleted empty room " + socket.currentRoom);
+          console.log("ðŸ—‘ï¸  Deleted empty room " + socket.currentRoom);
         }
       }
     }
@@ -1418,6 +1600,6 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log("🚀 Shared Video Player at http://localhost:" + PORT);
-  console.log("🔑 Admin Upload Key:", ADMIN_KEY);
+  console.log("ðŸš€ Shared Video Player at http://localhost:" + PORT);
+  console.log("ðŸ”‘ Admin Upload Key:", ADMIN_KEY);
 });
