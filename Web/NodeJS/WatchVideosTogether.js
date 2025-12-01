@@ -73,39 +73,57 @@ const rooms = new Map();
 const sessions = new Map(); // sessionId -> username
 const MAX_SESSIONS = 1000;
 
+// === Middleware to check admin key BEFORE upload ===
+function checkAdminKey(req, res, next) {
+  const providedKey = req.query.key;
+  
+  if (!providedKey) {
+    console.error("❌ No admin key provided");
+    return res.status(401).send("❌ Admin key required");
+  }
+  
+  if (providedKey !== ADMIN_KEY) {
+    console.error("❌ Invalid admin key provided:", providedKey.substring(0, 8) + "...");
+    return res.status(403).send("❌ Invalid admin key");
+  }
+  
+  console.log("✅ Admin key validated");
+  next();
+}
+
 // === Upload route - WITH COMPREHENSIVE TIMEOUT AND ERROR HANDLING ===
-app.post("/upload", (req, res, next) => {
-  console.log("ðŸ“¥ Upload started - Setting timeouts...");
+app.post("/upload", checkAdminKey, (req, res, next) => {
+  console.log("📥 Upload authorized - Setting timeouts...");
   
   // Set VERY long timeouts for large file uploads (4 hours)
   const UPLOAD_TIMEOUT = 4 * 60 * 60 * 1000;
   
   req.setTimeout(UPLOAD_TIMEOUT, () => {
-    console.error("âŒ Request timeout after", UPLOAD_TIMEOUT / 1000, "seconds");
+    console.error("❌ Request timeout after", UPLOAD_TIMEOUT / 1000, "seconds");
   });
   
   res.setTimeout(UPLOAD_TIMEOUT, () => {
-    console.error("âŒ Response timeout after", UPLOAD_TIMEOUT / 1000, "seconds");
+    console.error("❌ Response timeout after", UPLOAD_TIMEOUT / 1000, "seconds");
   });
   
   // Socket timeout
   if (req.socket) {
     req.socket.setTimeout(UPLOAD_TIMEOUT, () => {
-      console.error("âŒ Socket timeout after", UPLOAD_TIMEOUT / 1000, "seconds");
+      console.error("❌ Socket timeout after", UPLOAD_TIMEOUT / 1000, "seconds");
     });
   }
   
   // Connection monitoring
   req.on('close', () => {
-    console.log("âš ï¸  Request connection closed");
+    console.log("⚠️  Request connection closed");
   });
   
   req.on('aborted', () => {
-    console.error("âŒ Request aborted by client");
+    console.error("❌ Request aborted by client");
   });
   
   req.on('error', (err) => {
-    console.error("âŒ Request error:", err);
+    console.error("❌ Request error:", err);
   });
   
   // Track upload progress
@@ -113,34 +131,29 @@ app.post("/upload", (req, res, next) => {
   req.on('data', (chunk) => {
     receivedBytes += chunk.length;
     if (receivedBytes % (50 * 1024 * 1024) === 0) { // Log every 50MB
-      console.log(`ðŸ“Š Received ${(receivedBytes / 1024 / 1024).toFixed(2)} MB...`);
+      console.log(`📊 Received ${(receivedBytes / 1024 / 1024).toFixed(2)} MB...`);
     }
   });
   
   next();
 }, upload.single("video"), (req, res) => {
-  if (req.query.key !== ADMIN_KEY) {
-    console.error("âŒ Invalid admin key provided");
-    return res.status(403).send("âŒ Invalid admin key");
-  }
-  
   if (!req.file) {
-    console.error("âŒ No file in request");
-    return res.status(400).send("âŒ No video file uploaded");
+    console.error("❌ No file in request");
+    return res.status(400).send("❌ No video file uploaded");
   }
 
   const filePath = path.join(UPLOADS_DIR, req.file.filename);
   if (!fs.existsSync(filePath)) {
-    console.error("ðŸš« File missing right after upload:", filePath);
+    console.error("🚫 File missing right after upload:", filePath);
     return res.status(500).send("Internal error saving file");
   }
 
   const fileUrl = `/uploads/${req.file.filename}`;
-  console.log("âœ… Upload complete:", fileUrl, `(${(req.file.size / 1024 / 1024).toFixed(2)} MB)`);
+  console.log("✅ Upload complete:", fileUrl, `(${(req.file.size / 1024 / 1024).toFixed(2)} MB)`);
   res.json({ url: fileUrl });
 }, (err, req, res, next) => {
   // Error handler for multer
-  console.error("âŒ Multer/Upload error:", err.message);
+  console.error("❌ Multer/Upload error:", err.message);
   console.error("Error details:", err);
   
   if (err.code === 'LIMIT_FILE_SIZE') {
@@ -981,10 +994,10 @@ video {
   <div class="header-container">
     <div class="header-top">
       <div class="brand">
-        <div class="logo">ðŸŽ¬</div>
+        <div class="logo">🎬</div>
         <div class="brand-text">
           <div class="brand-title">WatchVideosTogether.js</div>
-          <div class="brand-subtitle">Made with Love â¤ï¸</div>
+          <div class="brand-subtitle">Made with Love ❤️</div>
         </div>
       </div>
       <div class="room-info">
@@ -994,12 +1007,12 @@ video {
     </div>
     
     <div class="mobile-tabs">
-      <button class="mobile-tab active" id="videoTab">ðŸ“¹ Video</button>
-      <button class="mobile-tab" id="chatTab">ðŸ’¬ Chat</button>
+      <button class="mobile-tab active" id="videoTab">📹 Video</button>
+      <button class="mobile-tab" id="chatTab">💬 Chat</button>
     </div>
     
     <button class="controls-toggle" id="controlsToggle">
-      <span>âš™ï¸</span>
+      <span>⚙️</span>
       <span id="toggleText">Show Controls</span>
     </button>
     
@@ -1008,7 +1021,7 @@ video {
         <!-- Participants Section -->
         <div class="participants-section">
           <div class="participants-header">
-            ðŸ‘¥ Participants
+            👥 Participants
             <span class="participant-count" id="participantCount">0</span>
           </div>
           <div class="participants-list" id="participantsList">
@@ -1017,7 +1030,7 @@ video {
         </div>
         
         <div class="control-group">
-          <label class="control-label">ðŸ”— Load Video URL</label>
+          <label class="control-label">🔗 Load Video URL</label>
           <div class="input-group">
             <input type="text" id="videoUrl" placeholder="https://example.com/video.mp4">
             <button id="loadBtn">Load</button>
@@ -1025,7 +1038,7 @@ video {
         </div>
         
         <div class="control-group">
-          <label class="control-label">ðŸ“¤ Upload Video (Admin)</label>
+          <label class="control-label">📤 Upload Video (Admin)</label>
           <div class="input-group">
             <input type="text" id="adminKey" placeholder="Admin Key">
           </div>
@@ -1048,7 +1061,7 @@ video {
         </div>
         
         <div class="sound-toggle" id="soundToggle">
-          <span class="sound-icon" id="soundIcon">ðŸ”Š</span>
+          <span class="sound-icon" id="soundIcon">🔊</span>
           <span class="sound-label">Click to toggle sound</span>
         </div>
       </div>
@@ -1120,11 +1133,11 @@ function updateToggleText(isExpanded) {
 function updateSoundToggle() {
   const icon = document.getElementById('soundIcon');
   if (player.muted) {
-    icon.textContent = 'ðŸ”‡';
+    icon.textContent = '🔇';
     soundToggle.classList.remove('unmuted');
     soundToggle.classList.add('muted');
   } else {
-    icon.textContent = 'ðŸ”Š';
+    icon.textContent = '🔊';
     soundToggle.classList.remove('muted');
     soundToggle.classList.add('unmuted');
   }
@@ -1493,7 +1506,7 @@ io.on("connection", (socket) => {
     
     io.to(room).emit("chat:message", joinMsg);
     
-    console.log("âœ… " + username + " joined room " + room);
+    console.log("✅ " + username + " joined room " + room);
   });
   
   socket.on("disconnect", () => {
@@ -1519,12 +1532,12 @@ io.on("connection", (socket) => {
         
         io.to(socket.currentRoom).emit("chat:message", leaveMsg);
         
-        console.log("ðŸ‘‹ " + socket.username + " left room " + socket.currentRoom);
+        console.log("👋 " + socket.username + " left room " + socket.currentRoom);
         
         // Clean up empty rooms
         if (roomData.participants.size === 0) {
           rooms.delete(socket.currentRoom);
-          console.log("ðŸ—‘ï¸  Deleted empty room " + socket.currentRoom);
+          console.log("🗑️  Deleted empty room " + socket.currentRoom);
         }
       }
     }
@@ -1600,6 +1613,6 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log("ðŸš€ Shared Video Player at http://localhost:" + PORT);
-  console.log("ðŸ”‘ Admin Upload Key:", ADMIN_KEY);
+  console.log("🚀 Shared Video Player at http://localhost:" + PORT);
+  console.log("🔑 Admin Upload Key:", ADMIN_KEY);
 });
