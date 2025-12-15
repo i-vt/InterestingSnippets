@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <title>Transliteration Tool</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Free transliteration tool - convert text between Latin and Cyrillic characters">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap');
+        
+        :root {
+            --primary-color: #2C5F7C;
+            --secondary-color: #4A9EBF;
+            --accent-color: #E8A87C;
+            --bg-primary: #FAFBFC;
+            --bg-secondary: #FFFFFF;
+            --text-primary: #1A2332;
+            --text-secondary: #5A6C7D;
+            --border-color: #E5E8EB;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
+            --radius-sm: 6px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #FAFBFC 0%, #F0F4F8 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 0;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem 2rem 4rem;
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 3rem 0 2rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        .header h1 {
+            font-family: 'Crimson Pro', serif;
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+        
+        /* Main Editor */
+        .editor-section {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-md);
+            animation: slideUp 0.6s ease-out 0.1s backwards;
+        }
+        
+        /* Character Map */
+        .char-map {
+            background: linear-gradient(135deg, #F8FAFC 0%, #F0F4F8 100%);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            overflow-x: auto;
+        }
+        
+        .char-map h3 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.3rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+        
+        .char-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+            gap: 0.5rem;
+        }
+        
+        .char-btn {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 0.75rem 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            font-family: 'DM Sans', sans-serif;
+        }
+        
+        .char-btn:hover {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .char-label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+        }
+        
+        .char-value {
+            display: block;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .toolbar button {
+            padding: 0.65rem 1.25rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'DM Sans', sans-serif;
+        }
+        
+        .toolbar button:hover {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .toolbar button:active {
+            transform: translateY(0);
+        }
+        
+        /* Text Area */
+        .text-editor {
+            position: relative;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 400px;
+            padding: 1.5rem;
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: 1.05rem;
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.8;
+            resize: vertical;
+            background: white;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(74, 158, 191, 0.1);
+        }
+        
+        .char-counter {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem 1rem 3rem;
+            }
+            
+            .header {
+                padding: 2rem 0 1rem;
+            }
+            
+            .editor-section,
+            .search-tools {
+                padding: 1.5rem;
+            }
+            
+            .toolbar {
+                gap: 0.5rem;
+            }
+            
+            .toolbar button {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.85rem;
+            }
+            
+            .char-grid {
+                grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
+                gap: 0.4rem;
+            }
+            
+            textarea {
+                min-height: 300px;
+                padding: 1rem;
+                font-size: 1rem;
+            }
+        }
+        
+        /* Hide elements initially shown */
+        .hidden {
+            display: none;
+        }
+    </style>
+    
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body onkeydown="AkeyIsDown(event);" onkeypress="switcher(event);" onbeforeunload="if(document.searchform.subject.value.length>250) return('Ваш текст будет потерян.');">
+
+<script type="text/javascript">
+var scrollByClick = false;
+</script>
+
+<script language="JavaScript" type="text/javascript">
+// All the original transliteration JavaScript code
+var tra = new Array();
+var abc2 = new Array();
+var abc1 = new Array();
+
+tra['a'] = new Array ('й+','ы+','Й+','Ы+','й','ы','Й','Ы','','');
+abc2['a'] = new Array ('йа','ыа','Йа','Ыа','я','я','Я','Я','а','a');
+
+tra['b'] = new Array ('','');
+abc2['b'] = new Array ('б','b');
+
+tra['v'] = new Array ('','');
+abc2['v'] = new Array ('в','v');
+
+tra['g'] = new Array ('','');
+abc2['g'] = new Array ('г','g');
+
+tra['d'] = new Array ('','');
+abc2['d'] = new Array ('д','d');
+
+tra['e'] = new Array ('й+','Й+','й','Й','','');
+abc2['e'] = new Array ('йе','Йе','э','Э','е','e');
+
+tra['o'] = new Array ('й+','ы+','Й+','Ы+','й','ы','Й','Ы','','');
+abc2['o'] = new Array ('йо','ыо','Йо','Ыо','ё','ё','Ё','Ё','о','o');
+
+tra['ö'] = new Array ('','');
+abc2['ö'] = new Array ('ё','ö');
+
+tra['h'] = new Array ('сх+','Сх+','сх','Сх','з+','ц+','с+','ш+','З+','Ц+','С+','Ш+','з','ц','с','ш','З','Ц','С','Ш','','');
+abc2['h'] = new Array ('схх','Схх','щ','Щ','зх','цх','сх','шх','Зх','Цх','Сх','Шх','ж','ч','ш','щ','Ж','Ч','Ш','Щ','х','h');
+
+tra['z'] = new Array ('тв+','мй+','Тв+','Мй+','тв','мй','Тв','Мй','','');
+abc2['z'] = new Array ('твз','мйз','Твз','Мйз','ъ','ь','Ъ','Ь','з','z');
+
+tra['i'] = new Array ('','');
+abc2['i'] = new Array ('и','i');
+
+tra['j'] = new Array ('','');
+abc2['j'] = new Array ('й','j');
+
+tra['k'] = new Array ('','');
+abc2['k'] = new Array ('к','k');
+
+tra['l'] = new Array ('','');
+abc2['l'] = new Array ('л','l');
+
+tra['m'] = new Array ('','');
+abc2['m'] = new Array ('м','m');
+
+tra['n'] = new Array ('','');
+abc2['n'] = new Array ('н','n');
+
+tra['p'] = new Array ('','');
+abc2['p'] = new Array ('п','p');
+
+tra['r'] = new Array ('','');
+abc2['r'] = new Array ('р','r');
+
+tra['s'] = new Array ('','');
+abc2['s'] = new Array ('с','s');
+
+tra['t'] = new Array ('','');
+abc2['t'] = new Array ('т','t');
+
+tra['u'] = new Array ('й+','ы+','Й+','Ы+','й','ы','Й','Ы','','');
+abc2['u'] = new Array ('йу','ыу','Йу','Ыу','ю','ю','Ю','Ю','у','u');
+
+tra['f'] = new Array ('','');
+abc2['f'] = new Array ('ф','f');
+
+tra['x'] = new Array ('','');
+abc2['x'] = new Array ('х','x');
+
+tra['c'] = new Array ('','');
+abc2['c'] = new Array ('ц','c');
+
+tra['w'] = new Array ('','');
+abc2['w'] = new Array ('щ','w');
+
+tra['#'] = new Array ('ъ+','ъ','','');
+abc2['#'] = new Array ('ъъ','Ъ','ъ','#');
+
+tra['y'] = new Array ('','');
+abc2['y'] = new Array ('ы','y');
+
+tra['\''] = new Array ('ь+','ь','','');
+abc2['\''] = new Array ('ьь','Ь','ь','\'');
+
+tra['ä'] = new Array ('','');
+abc2['ä'] = new Array ('э','ä');
+
+tra['ü'] = new Array ('','');
+abc2['ü'] = new Array ('ю','ü');
+
+tra['q'] = new Array ('','');
+abc2['q'] = new Array ('я','q');
+
+tra['A'] = new Array ('Й+','Ы+','Й','Ы','','');
+abc2['A'] = new Array ('ЙА','ЫА','Я','Я','А','A');
+
+tra['B'] = new Array ('','');
+abc2['B'] = new Array ('Б','B');
+
+tra['V'] = new Array ('','');
+abc2['V'] = new Array ('В','V');
+
+tra['G'] = new Array ('','');
+abc2['G'] = new Array ('Г','G');
+
+tra['D'] = new Array ('','');
+abc2['D'] = new Array ('Д','D');
+
+tra['E'] = new Array ('Й+','Й','','');
+abc2['E'] = new Array ('ЙЕ','Э','Е','E');
+
+tra['O'] = new Array ('Й+','Ы+','Й','Ы','','');
+abc2['O'] = new Array ('ЙО','ЫО','Ё','Ё','О','O');
+
+tra['Ö'] = new Array ('','');
+abc2['Ö'] = new Array ('Ё','Ö');
+
+tra['H'] = new Array ('СХ+','СХ','З+','Ц+','С+','Ш+','З','Ц','С','Ш','','');
+abc2['H'] = new Array ('СХХ','Щ','ЗХ','ЦХ','СХ','ШХ','Ж','Ч','Ш','Щ','Х','H');
+
+tra['Z'] = new Array ('ТВ+','МЙ+','ТВ','МЙ','','');
+abc2['Z'] = new Array ('ТВЗ','МЙЗ','Ъ','Ь','З','Z');
+
+tra['I'] = new Array ('','');
+abc2['I'] = new Array ('И','I');
+
+tra['J'] = new Array ('','');
+abc2['J'] = new Array ('Й','J');
+
+tra['K'] = new Array ('','');
+abc2['K'] = new Array ('К','K');
+
+tra['L'] = new Array ('','');
+abc2['L'] = new Array ('Л','L');
+
+tra['M'] = new Array ('','');
+abc2['M'] = new Array ('М','M');
+
+tra['N'] = new Array ('','');
+abc2['N'] = new Array ('Н','N');
+
+tra['P'] = new Array ('','');
+abc2['P'] = new Array ('П','P');
+
+tra['R'] = new Array ('','');
+abc2['R'] = new Array ('Р','R');
+
+tra['S'] = new Array ('','');
+abc2['S'] = new Array ('С','S');
+
+tra['T'] = new Array ('','');
+abc2['T'] = new Array ('Т','T');
+
+tra['U'] = new Array ('Й+','Ы+','Й','Ы','','');
+abc2['U'] = new Array ('ЙУ','ЫУ','Ю','Ю','У','U');
+
+tra['F'] = new Array ('','');
+abc2['F'] = new Array ('Ф','F');
+
+tra['X'] = new Array ('','');
+abc2['X'] = new Array ('Х','X');
+
+tra['C'] = new Array ('','');
+abc2['C'] = new Array ('Ц','C');
+
+tra['W'] = new Array ('','');
+abc2['W'] = new Array ('Щ','W');
+
+tra['Y'] = new Array ('','');
+abc2['Y'] = new Array ('Ы','Y');
+
+tra['Ä'] = new Array ('','');
+abc2['Ä'] = new Array ('Э','Ä');
+
+tra['Ü'] = new Array ('','');
+abc2['Ü'] = new Array ('Ю','Ü');
+
+tra['Q'] = new Array ('','');
+abc2['Q'] = new Array ('Я','Q');
+
+abc1['а'] = 'a';
+abc1['б'] = 'b';
+abc1['в'] = 'v';
+abc1['г'] = 'g';
+abc1['д'] = 'd';
+abc1['е'] = 'e';
+abc1['ё'] = 'jo';
+abc1['ж'] = 'zh';
+abc1['з'] = 'z';
+abc1['и'] = 'i';
+abc1['й'] = 'j';
+abc1['к'] = 'k';
+abc1['л'] = 'l';
+abc1['м'] = 'm';
+abc1['н'] = 'n';
+abc1['о'] = 'o';
+abc1['п'] = 'p';
+abc1['р'] = 'r';
+abc1['с'] = 's';
+abc1['т'] = 't';
+abc1['у'] = 'u';
+abc1['ф'] = 'f';
+abc1['х'] = 'h';
+abc1['ц'] = 'c';
+abc1['ч'] = 'ch';
+abc1['ш'] = 'sh';
+abc1['щ'] = 'shh';
+abc1['ъ'] = '#';
+abc1['ы'] = 'y';
+abc1['ь'] = '\'';
+abc1['э'] = 'je';
+abc1['ю'] = 'ju';
+abc1['я'] = 'ja';
+abc1['А'] = 'A';
+abc1['Б'] = 'B';
+abc1['В'] = 'V';
+abc1['Г'] = 'G';
+abc1['Д'] = 'D';
+abc1['Е'] = 'E';
+abc1['Ё'] = 'Jo';
+abc1['Ж'] = 'Zh';
+abc1['З'] = 'Z';
+abc1['И'] = 'I';
+abc1['Й'] = 'J';
+abc1['К'] = 'K';
+abc1['Л'] = 'L';
+abc1['М'] = 'M';
+abc1['Н'] = 'N';
+abc1['О'] = 'O';
+abc1['П'] = 'P';
+abc1['Р'] = 'R';
+abc1['С'] = 'S';
+abc1['Т'] = 'T';
+abc1['У'] = 'U';
+abc1['Ф'] = 'F';
+abc1['Х'] = 'H';
+abc1['Ц'] = 'C';
+abc1['Ч'] = 'Ch';
+abc1['Ш'] = 'Sh';
+abc1['Щ'] = 'Shh';
+abc1['Ъ'] = '##';
+abc1['Ы'] = 'Y';
+abc1['Ь'] = '\'\'';
+abc1['Э'] = 'Je';
+abc1['Ю'] = 'Ju';
+abc1['Я'] = 'Ja';
+
+$(document).ready(function() {
+    $("body").click(function(event) {
+        lettcount();
+        savechanges();
+    })
+});
+
+var translit = 0;
+var is_direction_lat_to_cyr = 1;
+var is_direction_cyr_to_lat = 1;
+var pretranslit = 0;
+var processhtmltags = 0;
+var processbbcodetags = 0;
+var securetext = 0;
+var keepTextOn = false;
+
+function setfoc() {
+    document.searchform.subject.focus();
+    return false;
+}
+
+function highlightall() {
+    document.searchform.subject.focus(); 
+    document.searchform.subject.select(); 
+    return false;
+}
+
+function getselectedtext() {
+    document.secondaryform.subject.value = gettextareaval(document.searchform.subject);
+    document.secondaryform.extendedsubject.value = document.searchform.subject.value;
+    return false;
+}
+
+function setlanguage() {
+    // Mode switcher removed - just update character table
+    chartabledirection=translit;
+    showtable(shift,chartabledirection);
+    return false;
+}
+
+function changelanguage() {
+    if (is_direction_lat_to_cyr===1 && is_direction_cyr_to_lat===1) {
+        translit = (translit==0?1:0);
+        setlanguage();
+    }
+    return false;
+}
+
+function setcharset1() {
+    translit=1; 
+    setlanguage();
+    return false;
+}
+
+function setcharset2() {
+    translit=0;
+    setlanguage();
+    return false;
+}
+
+function setEditorText(txt) {
+    document.searchform.subject.value=txt;
+    return true;
+}
+
+function getEditorText() {
+    return document.searchform.subject.value;
+}
+
+function maybeBackToText() {
+    // Simplified - no longer scrolling to searchblock
+}
+
+function backToText() {
+    // Simplified - just focus on text area
+    setfoc();
+}
+
+function lettcount() {	
+    var vv = gettextareaval(document.searchform.subject);
+    var txtt = btcvalue(document.searchform.subject);
+    $('#letterscounter').html(txtt.replace(/\r/g,'').length);
+    return false;
+}
+
+var undotext = new Array();
+
+function savechanges() {
+    var undodepth = 10;
+    var undotext_last = undotext.length?undotext[undotext.length-1]:'';
+    if (undotext_last != document.searchform.subject.value) {
+        undotext.push(document.searchform.subject.value);
+        if (undotext.length > (undodepth+1)) {
+            undotext.shift();
+        }
+    }
+    return false;
+}
+
+function common_string(s1,s2) {
+    var count1 = 0;
+    while((s1.charAt(count1) == s2.charAt(count1))&&(count1 < s1.length)&&(count1 < s2.length)) {
+        count1++;
+    }
+    var count2 = 0;
+    while((s1.charAt(s1.length-count2-1) == s2.charAt(s2.length-count2-1))&&(count2 < s1.length-count1)&&(count2 < s2.length-count1)) {
+        count2++;
+    }
+    return s1.substring(0,s1.length-count2);
+}
+
+function recovertext() {
+    if (undotext.length > 1) {
+        var tt = document.searchform.subject;
+        var pXpix = tt.scrollTop;
+        var pYpix = tt.scrollLeft;		
+        tt.value = undotext[undotext.length-2];
+        var result = common_string(undotext[undotext.length-2],undotext[undotext.length-1]);
+        tt.setSelectionRange(result.length,result.length);	
+        undotext.pop();	
+    }
+    return false;
+}
+
+var textareafontsize = 16;
+var textreafontwidth = 9;
+var pXpix = 0;
+var pYpix = 0;
+       	
+function get_texatrea_scroll_position() {
+    pXpix = window.document.searchform.subject.scrollTop;
+    pYpix = window.document.searchform.subject.scrollLeft;
+    return false;
+}
+
+function set_texatrea_scroll_position() {
+    return false;
+}
+
+function addchar(result, evnt) {
+    if (evnt.shiftKey) result = result.toUpperCase();
+    get_texatrea_scroll_position();
+    var tt = window.document.searchform.subject; 
+    var p1 = tt.selectionStart;
+    tt.value = tt.value.substring(0, p1)+result+tt.value.substring(tt.selectionEnd);
+    tt.setSelectionRange(p1+result.length,p1+result.length);
+    set_texatrea_scroll_position();
+    setfoc();
+    lettcount();
+    savechanges();
+    return false;
+}
+
+var flagServiceKey = 0;
+
+function AkeyIsDown(evnt) {
+    evnt = evnt || window.event;
+    var code = evnt.keyCode;
+    flagServiceKey = 0;
+    if (code==27 || code==123) {
+        changelanguage(); 
+        evnt.preventDefault();
+    } 
+    else if (evnt.keyCode==89 && evnt.altKey) {
+        flagServiceKey = 1;
+    }
+    return false;
+}
+
+function key_up_process(evnt) {
+    return false;
+}
+
+function switcher(evnt) {
+    evnt = evnt || window.event;	
+    if (flagServiceKey===1) {
+        evnt.preventDefault();
+    }
+    return false;
+}
+
+function translate_letter(evnt) {
+    evnt = evnt || window.event;
+    if (flagServiceKey===1) {
+        return false;
+    }
+
+    var code = evnt.keyCode ? evnt.keyCode : evnt.charCode ? evnt.charCode : evnt.which ? evnt.which : void 0;
+    if (!evnt.which) {
+        return true;
+    }
+    var txt = String.fromCharCode(code);
+    
+    if (code&&code>33&&(!(evnt.ctrlKey||evnt.altKey||evnt.metaKey))) {
+        if (evnt.preventDefault) {
+            evnt.preventDefault();
+        }
+        tt = window.document.searchform.subject;
+        var pretxt = tt.value.substring(0, tt.selectionStart);
+        var result = "";
+        get_texatrea_scroll_position();
+        if (translit) {
+            result = pretxt+translatesymboltocharset1(txt);
+        } else {
+            result = translatesymboltocharset2(pretxt+txt);
+        }
+        var therest = tt.value.substr(tt.selectionEnd);
+        tt.value = result+therest;
+        tt.setSelectionRange(result.length,result.length);
+        set_texatrea_scroll_position();
+    }
+    return false;
+}
+
+function translatesymboltocharset2(txt) {
+    var pretxt = txt.substr(0,txt.length-1);
+    var last = txt.substr(txt.length-1,1);
+    var lat = tra[last];
+    var rus = abc2[last];
+    if (lat) {
+        for (var ii=0; ii<lat.length; ii++) {
+            var pos = pretxt.length>lat[ii].length?(pretxt.length-lat[ii].length):0;
+            if (lat[ii]==pretxt.substr(pos,pretxt.length-pos)) {
+                return pretxt.substr(0,pretxt.length-lat[ii].length)+rus[ii];
+            }
+        }
+    }
+    return txt;
+}
+
+function translatesymboltocharset1(symb) {
+    return (typeof abc1[symb] != 'undefined')?abc1[symb]:symb;
+}
+
+function translatealltocharset2() {
+    var inloop=1;
+    get_texatrea_scroll_position()
+    var tt = window.document.searchform.subject; 
+    var p1 = tt.selectionStart; 
+    var p2 = tt.selectionEnd;
+    var preval = ""; 
+    var postval="";
+    if (p1==p2) {txt = tt.value;}
+    else {
+        preval = tt.value.substring(0, p1);
+        txt = tt.value.substring(p1,p2);
+        postval = tt.value.substring(p2);
+    }
+    var txtnew = translatestringtocharset2(txt);
+    tt.value = preval+txtnew+postval;
+    if (p1!=p2) {tt.setSelectionRange(p1+txtnew.length,p1+txtnew.length);}
+    set_texatrea_scroll_position();
+    lettcount();
+    savechanges();
+    return false;
+}
+
+function translatestringtocharset2(thestringlat) {
+    var symbb,fromm,howmuch,thestringcyr="";
+    for (kk=0;kk<thestringlat.length;kk++) {
+        thestringcyr = translatesymboltocharset2(thestringcyr+thestringlat.substr(kk,1))		
+    }
+    return thestringcyr;
+}
+
+function translatealltocharset1() {
+    get_texatrea_scroll_position();
+    tt = window.document.searchform.subject; 
+    p1 = tt.selectionStart; p2 = tt.selectionEnd;
+    var preval = ""; var postval="";
+    if (p1==p2) {txt = tt.value;}
+    else {
+        preval = tt.value.substring(0, p1);
+        txt = tt.value.substring(p1,p2);
+        postval = tt.value.substring(p2);
+    }
+    txtnew="";
+    var symb = "";
+    for (kk=0;kk<txt.length;kk++) {
+        symb = translatesymboltocharset1(txt.substr(kk,1));
+        txtnew = txtnew.substr(0,txtnew.length) + symb;
+    }
+    tt.value = preval+txtnew+postval;
+    if (p1!=p2) {tt.setSelectionRange(p1+txtnew.length,p1+txtnew.length);}
+    set_texatrea_scroll_position();
+    lettcount();
+    savechanges();
+    return false;
+}
+
+function gettextareaval(thetextarea) {
+    with (thetextarea) {
+        if (selectionStart==selectionEnd) return value;	
+        return value.substring(selectionStart,selectionEnd);
+    }
+}
+
+function btcvalue(thetextarea) {
+    return thetextarea.value.substring(0,thetextarea.selectionEnd);
+}
+
+function cleartrans() {
+    var textinputform = window.document.searchform.subject; 
+    var p1 = textinputform.selectionStart; 
+    var p2 = textinputform.selectionEnd; 
+    if (p1==p2) {
+        textinputform.value="";
+    } else {
+        textinputform.value = textinputform.value.substring(0, p1)+textinputform.value.substring(p2);
+    } 
+    textinputform.setSelectionRange(p1,p1);
+    lettcount();
+    savechanges();
+    return false;
+}
+
+function movecursor(x) {
+    if (x === parseInt(x)) {
+        var tt = window.document.searchform.subject; 
+        tt.setSelectionRange(x,x);
+    }
+    return false;
+}
+
+function getcurosrpos() {
+    setfoc();
+    return window.document.searchform.subject.selectionEnd;
+}
+
+var shift = 0;
+var chartabledirection = 0;
+var chartable = new Array(
+    new Array("а","б","в","г","д","е","ё","ж","з","и","й","к","л","м","н","о","п","р","с","т","у","ф","х","ц","ч","ш","щ","ъ","ы","ь","э","ю","я"),
+    new Array("А","Б","В","Г","Д","Е","Ё","Ж","З","И","Й","К","Л","М","Н","О","П","Р","С","Т","У","Ф","Х","Ц","Ч","Ш","Щ","Ъ","Ы","Ь","Э","Ю","Я"),
+    new Array("a","b","v","g","d","e","jo","zh","z","i","j","k","l","m","n","o","p","r","s","t","u","f","h","c","ch","sh","shh","#","y","'","je","ju","ja"),
+    new Array("A","B","V","G","D","E","Jo","Zh","Z","I","J","K","L","M","N","O","P","R","S","T","U","F","H","C","Ch","Sh","Shh","##","Y","''","Je","Ju","Ja")
+);
+
+function showtable(shift,chartabledirection) {
+    row = 2*(chartabledirection?1:0) + (shift?1:0);
+    for (var i=0;i<chartable[row].length;i++) {
+        if ($("#charbutton"+i).length) {
+            if (chartable[row][i].length>0) {
+                $("#charbutton"+i).val(chartable[row][i]);
+            } else {
+                $("#charbutton"+i).val(" ");
+            }
+        }
+    }
+    setfoc();
+}
+</script>
+
+<div class="container">
+    <header class="header">
+        <h1>Transliteration Tool</h1>
+        <p>Convert text between Latin and Cyrillic alphabets</p>
+    </header>
+
+    <div class="editor-section">
+        <div class="char-map">
+            <h3>Character Map</h3>
+            <div class="char-grid">
+                <div class="char-btn" onclick="addchar('а',event);">
+                    <span class="char-label">a</span>
+                    <span class="char-value" id="charbutton0">а</span>
+                </div>
+                <div class="char-btn" onclick="addchar('б',event);">
+                    <span class="char-label">b</span>
+                    <span class="char-value" id="charbutton1">б</span>
+                </div>
+                <div class="char-btn" onclick="addchar('в',event);">
+                    <span class="char-label">v</span>
+                    <span class="char-value" id="charbutton2">в</span>
+                </div>
+                <div class="char-btn" onclick="addchar('г',event);">
+                    <span class="char-label">g</span>
+                    <span class="char-value" id="charbutton3">г</span>
+                </div>
+                <div class="char-btn" onclick="addchar('д',event);">
+                    <span class="char-label">d</span>
+                    <span class="char-value" id="charbutton4">д</span>
+                </div>
+                <div class="char-btn" onclick="addchar('е',event);">
+                    <span class="char-label">e</span>
+                    <span class="char-value" id="charbutton5">е</span>
+                </div>
+                <div class="char-btn" onclick="addchar('ё',event);">
+                    <span class="char-label">jo/yo/ö</span>
+                    <span class="char-value" id="charbutton6">ё</span>
+                </div>
+                <div class="char-btn" onclick="addchar('ж',event);">
+                    <span class="char-label">zh</span>
+                    <span class="char-value" id="charbutton7">ж</span>
+                </div>
+                <div class="char-btn" onclick="addchar('з',event);">
+                    <span class="char-label">z</span>
+                    <span class="char-value" id="charbutton8">з</span>
+                </div>
+                <div class="char-btn" onclick="addchar('и',event);">
+                    <span class="char-label">i</span>
+                    <span class="char-value" id="charbutton9">и</span>
+                </div>
+                <div class="char-btn" onclick="addchar('й',event);">
+                    <span class="char-label">j</span>
+                    <span class="char-value" id="charbutton10">й</span>
+                </div>
+                <div class="char-btn" onclick="addchar('к',event);">
+                    <span class="char-label">k</span>
+                    <span class="char-value" id="charbutton11">к</span>
+                </div>
+                <div class="char-btn" onclick="addchar('л',event);">
+                    <span class="char-label">l</span>
+                    <span class="char-value" id="charbutton12">л</span>
+                </div>
+                <div class="char-btn" onclick="addchar('м',event);">
+                    <span class="char-label">m</span>
+                    <span class="char-value" id="charbutton13">м</span>
+                </div>
+                <div class="char-btn" onclick="addchar('н',event);">
+                    <span class="char-label">n</span>
+                    <span class="char-value" id="charbutton14">н</span>
+                </div>
+                <div class="char-btn" onclick="addchar('о',event);">
+                    <span class="char-label">o</span>
+                    <span class="char-value" id="charbutton15">о</span>
+                </div>
+                <div class="char-btn" onclick="addchar('п',event);">
+                    <span class="char-label">p</span>
+                    <span class="char-value" id="charbutton16">п</span>
+                </div>
+                <div class="char-btn" onclick="addchar('р',event);">
+                    <span class="char-label">r</span>
+                    <span class="char-value" id="charbutton17">р</span>
+                </div>
+                <div class="char-btn" onclick="addchar('с',event);">
+                    <span class="char-label">s</span>
+                    <span class="char-value" id="charbutton18">с</span>
+                </div>
+                <div class="char-btn" onclick="addchar('т',event);">
+                    <span class="char-label">t</span>
+                    <span class="char-value" id="charbutton19">т</span>
+                </div>
+                <div class="char-btn" onclick="addchar('у',event);">
+                    <span class="char-label">u</span>
+                    <span class="char-value" id="charbutton20">у</span>
+                </div>
+                <div class="char-btn" onclick="addchar('ф',event);">
+                    <span class="char-label">f</span>
+                    <span class="char-value" id="charbutton21">ф</span>
+                </div>
+                <div class="char-btn" onclick="addchar('х',event);">
+                    <span class="char-label">h/x</span>
+                    <span class="char-value" id="charbutton22">х</span>
+                </div>
+                <div class="char-btn" onclick="addchar('ц',event);">
+                    <span class="char-label">c</span>
+                    <span class="char-value" id="charbutton23">ц</span>
+                </div>
+                <div class="char-btn" onclick="addchar('ч',event);">
+                    <span class="char-label">ch</span>
+                    <span class="char-value" id="charbutton24">ч</span>
+                </div>
+                <div class="char-btn" onclick="addchar('ш',event);">
+                    <span class="char-label">sh</span>
+                    <span class="char-value" id="charbutton25">ш</span>
+                </div>
+                <div class="char-btn" onclick="addchar('щ',event);">
+                    <span class="char-label">shh/w</span>
+                    <span class="char-value" id="charbutton26">щ</span>
+                </div>
+                <div class="char-btn" onclick="addchar('ъ',event);">
+                    <span class="char-label">#/tvz</span>
+                    <span class="char-value" id="charbutton27">ъ</span>
+                </div>
+                <div class="char-btn" onclick="addchar('ы',event);">
+                    <span class="char-label">y</span>
+                    <span class="char-value" id="charbutton28">ы</span>
+                </div>
+                <div class="char-btn" onclick="addchar('ь',event);">
+                    <span class="char-label">'/mjz</span>
+                    <span class="char-value" id="charbutton29">ь</span>
+                </div>
+                <div class="char-btn" onclick="addchar('э',event);">
+                    <span class="char-label">je/ä</span>
+                    <span class="char-value" id="charbutton30">э</span>
+                </div>
+                <div class="char-btn" onclick="addchar('ю',event);">
+                    <span class="char-label">ju/yu/ü</span>
+                    <span class="char-value" id="charbutton31">ю</span>
+                </div>
+                <div class="char-btn" onclick="addchar('я',event);">
+                    <span class="char-label">ja/ya/q</span>
+                    <span class="char-value" id="charbutton32">я</span>
+                </div>
+            </div>
+        </div>
+
+        <form name="searchform">
+            <div class="toolbar">
+                <button type="button" onclick="recovertext();setfoc();" title="Undo last changes">Undo</button>
+                <button type="button" onclick="highlightall();setfoc();" title="Select all text">Select All</button>
+                <button type="button" onclick="cleartrans();setfoc();" title="Clear text">Clear</button>
+                <button type="button" onclick="translatealltocharset2();setfoc();" title="Convert entire text to Cyrillic">To Cyrillic</button>
+                <button type="button" onclick="translatealltocharset1();setfoc();" title="Convert entire text to Latin">To Latin</button>
+            </div>
+
+            <div class="text-editor">
+                <textarea 
+                    name="subject" 
+                    rows="30" 
+                    wrap="virtual" 
+                    onkeypress="translate_letter(event);" 
+                    onkeyup="lettcount(); savechanges(); key_up_process();" 
+                    onclick="maybeBackToText();"
+                    placeholder="Start typing here..."
+                ></textarea>
+                <div class="char-counter" id="letterscounter">0</div>
+            </div>
+        </form>
+
+        <form name="secondaryform" method="POST">
+            <input type="hidden" name="subject" value="">
+            <input type="hidden" name="extendedsubject" value="">
+            <input type="hidden" name="direction" value="ru">
+            <input type="hidden" name="cp" value="">
+        </form>
+    </div>
+</div>
+
+<script>
+// Initialize
+$(document).ready(function() {
+    setlanguage();
+    setfoc();
+    lettcount();
+});
+</script>
+
+</body>
+</html>
