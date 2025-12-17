@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <title>Transliteration Tool</title>
+    <title>Transliteration Tool with Dvorak Mode</title>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -69,6 +69,63 @@
             font-size: 1.1rem;
             color: var(--text-secondary);
             font-weight: 400;
+        }
+        
+        /* Mode Selector */
+        .mode-selector {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-md);
+            animation: slideUp 0.6s ease-out;
+        }
+        
+        .mode-selector h3 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.3rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+        
+        .mode-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .mode-btn {
+            flex: 1;
+            min-width: 200px;
+            padding: 1rem 1.5rem;
+            background: var(--bg-primary);
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 500;
+            font-size: 1rem;
+        }
+        
+        .mode-btn:hover {
+            border-color: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .mode-btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .mode-description {
+            display: block;
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-top: 0.25rem;
         }
         
         /* Main Editor */
@@ -211,6 +268,18 @@
             box-shadow: var(--shadow-sm);
         }
         
+        /* Status indicator */
+        .status-indicator {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: var(--accent-color);
+            color: white;
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        
         /* Animations */
         @keyframes fadeIn {
             from {
@@ -268,6 +337,10 @@
                 padding: 1rem;
                 font-size: 1rem;
             }
+            
+            .mode-btn {
+                min-width: 150px;
+            }
         }
         
         /* Hide elements initially shown */
@@ -285,6 +358,41 @@ var scrollByClick = false;
 </script>
 
 <script language="JavaScript" type="text/javascript">
+// Mode constants
+var MODE_TRANSLITERATION = 0;
+var MODE_DVORAK_CYRILLIC = 1;
+
+var currentMode = MODE_TRANSLITERATION;
+
+// Dvorak to Cyrillic mapping (based on physical key positions)
+var dvorakToCyrillic = {
+    // Top row
+    '\'': 'й', ',': 'ц', '.': 'у', 'p': 'к', 'y': 'е',
+    'f': 'н', 'g': 'г', 'c': 'ш', 'r': 'щ', 'l': 'з',
+    '/': 'х', '=': 'ъ',
+    
+    // Home row
+    'a': 'ф', 'o': 'ы', 'e': 'в', 'u': 'а', 'i': 'п',
+    'd': 'р', 'h': 'о', 't': 'л', 'n': 'д', 's': 'ж',
+    '-': 'э',
+    
+    // Bottom row
+    ';': 'я', 'q': 'ч', 'j': 'с', 'k': 'м', 'x': 'и',
+    'b': 'т', 'm': 'ь', 'w': 'б', 'v': 'ю', 'z': '.',
+    
+    // Uppercase
+    '"': 'Й', '<': 'Ц', '>': 'У', 'P': 'К', 'Y': 'Е',
+    'F': 'Н', 'G': 'Г', 'C': 'Ш', 'R': 'Щ', 'L': 'З',
+    '?': 'Х', '+': 'Ъ',
+    
+    'A': 'Ф', 'O': 'Ы', 'E': 'В', 'U': 'А', 'I': 'П',
+    'D': 'Р', 'H': 'О', 'T': 'Л', 'N': 'Д', 'S': 'Ж',
+    '_': 'Э',
+    
+    ':': 'Я', 'Q': 'Ч', 'J': 'С', 'K': 'М', 'X': 'И',
+    'B': 'Т', 'M': 'Ь', 'W': 'Б', 'V': 'Ю', 'Z': ','
+};
+
 // All the original transliteration JavaScript code
 var tra = new Array();
 var abc2 = new Array();
@@ -553,6 +661,23 @@ var processbbcodetags = 0;
 var securetext = 0;
 var keepTextOn = false;
 
+function setMode(mode) {
+    currentMode = mode;
+    
+    // Update mode button states
+    $('.mode-btn').removeClass('active');
+    if (mode === MODE_TRANSLITERATION) {
+        $('#mode-transliteration').addClass('active');
+        $('#mode-status').text('Mode: Transliteration');
+    } else if (mode === MODE_DVORAK_CYRILLIC) {
+        $('#mode-dvorak').addClass('active');
+        $('#mode-status').text('Mode: Dvorak → Cyrillic');
+    }
+    
+    setfoc();
+    return false;
+}
+
 function setfoc() {
     document.searchform.subject.focus();
     return false;
@@ -731,22 +856,42 @@ function translate_letter(evnt) {
     var txt = String.fromCharCode(code);
     
     if (code&&code>33&&(!(evnt.ctrlKey||evnt.altKey||evnt.metaKey))) {
-        if (evnt.preventDefault) {
-            evnt.preventDefault();
+        // Handle Dvorak mode
+        if (currentMode === MODE_DVORAK_CYRILLIC) {
+            if (dvorakToCyrillic[txt]) {
+                if (evnt.preventDefault) {
+                    evnt.preventDefault();
+                }
+                tt = window.document.searchform.subject;
+                var p1 = tt.selectionStart;
+                get_texatrea_scroll_position();
+                tt.value = tt.value.substring(0, p1) + dvorakToCyrillic[txt] + tt.value.substring(tt.selectionEnd);
+                tt.setSelectionRange(p1+1, p1+1);
+                set_texatrea_scroll_position();
+                lettcount();
+                savechanges();
+                return false;
+            }
         }
-        tt = window.document.searchform.subject;
-        var pretxt = tt.value.substring(0, tt.selectionStart);
-        var result = "";
-        get_texatrea_scroll_position();
-        if (translit) {
-            result = pretxt+translatesymboltocharset1(txt);
-        } else {
-            result = translatesymboltocharset2(pretxt+txt);
+        // Handle transliteration mode
+        else if (currentMode === MODE_TRANSLITERATION) {
+            if (evnt.preventDefault) {
+                evnt.preventDefault();
+            }
+            tt = window.document.searchform.subject;
+            var pretxt = tt.value.substring(0, tt.selectionStart);
+            var result = "";
+            get_texatrea_scroll_position();
+            if (translit) {
+                result = pretxt+translatesymboltocharset1(txt);
+            } else {
+                result = translatesymboltocharset2(pretxt+txt);
+            }
+            var therest = tt.value.substr(tt.selectionEnd);
+            tt.value = result+therest;
+            tt.setSelectionRange(result.length,result.length);
+            set_texatrea_scroll_position();
         }
-        var therest = tt.value.substr(tt.selectionEnd);
-        tt.value = result+therest;
-        tt.setSelectionRange(result.length,result.length);
-        set_texatrea_scroll_position();
     }
     return false;
 }
@@ -895,6 +1040,23 @@ function showtable(shift,chartabledirection) {
         <h1>Transliteration Tool</h1>
         <p>Convert text between Latin and Cyrillic alphabets</p>
     </header>
+
+    <div class="mode-selector">
+        <h3>Input Mode</h3>
+        <div class="mode-buttons">
+            <button class="mode-btn active" id="mode-transliteration" onclick="setMode(MODE_TRANSLITERATION);">
+                <strong>Transliteration Mode</strong>
+                <span class="mode-description">Type Latin characters and convert to Cyrillic</span>
+            </button>
+            <button class="mode-btn" id="mode-dvorak" onclick="setMode(MODE_DVORAK_CYRILLIC);">
+                <strong>Dvorak Keyboard Mode</strong>
+                <span class="mode-description">Type on Dvorak keyboard, get Cyrillic by key position</span>
+            </button>
+        </div>
+        <div style="margin-top: 1rem;">
+            <span class="status-indicator" id="mode-status">Mode: Transliteration</span>
+        </div>
+    </div>
 
     <div class="editor-section">
         <div class="char-map">
@@ -1073,6 +1235,7 @@ $(document).ready(function() {
     setlanguage();
     setfoc();
     lettcount();
+    setMode(MODE_TRANSLITERATION);
 });
 </script>
 
