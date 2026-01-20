@@ -32,11 +32,11 @@ const keyContent = `Admin Key: ${ADMIN_KEY}\nDate: ${new Date().toISOString()}`;
 try {
     const tmpPath = path.join('/tmp', 'WatchTogetherKey.txt');
     fs.writeFileSync(tmpPath, keyContent);
-    console.log(`🔑 Admin Key saved to: ${tmpPath}`);
+    console.log(`ðŸ”‘ Admin Key saved to: ${tmpPath}`);
 } catch (err) {
     const localPath = path.join(__dirname, 'WatchTogetherKey.txt');
     fs.writeFileSync(localPath, keyContent);
-    console.log(`⚠️  Admin Key saved to: ${localPath}`);
+    console.log(`âš ï¸  Admin Key saved to: ${localPath}`);
 }
 
 // === UTILS ===
@@ -451,7 +451,7 @@ video { width: 100%; height: 100%; max-height: calc(100vh - 60px); outline: none
     </div>
     
     <div style="margin-top:15px; border-top:1px solid var(--border); padding-top:15px;">
-      <button class="btn btn-secondary" id="browseBtn" style="width:100%">📂 Browse Files</button>
+      <button class="btn btn-secondary" id="browseBtn" style="width:100%">ðŸ“‚ Browse Files</button>
       <div id="fileBrowser"></div>
     </div>
   </div>
@@ -474,9 +474,9 @@ video { width: 100%; height: 100%; max-height: calc(100vh - 60px); outline: none
         <div class="chat-input-area">
           <emoji-picker class="dark" style="display:none; position: absolute; bottom: 100%; right: 0;"></emoji-picker>
           <div class="input-row" style="margin:0;">
-            <button class="btn btn-secondary" id="emojiBtn" style="padding: 0 10px; font-size:16px;">😀</button>
+            <button class="btn btn-secondary" id="emojiBtn" style="padding: 0 10px; font-size:16px;">ðŸ˜€</button>
             <input type="text" id="chatInput" placeholder="Say something...">
-            <button class="btn" id="sendBtn">➤</button>
+            <button class="btn" id="sendBtn">âž¤</button>
           </div>
         </div>
       </div>
@@ -612,9 +612,9 @@ browseBtn.onclick = async () => {
           <div class="file-size">\${f.size}</div>
         </div>
         <div class="file-actions">
-            <button class="btn btn-xs" onclick="loadVideo('\${f.url}')" title="Load">▶</button>
-            <button class="btn btn-xs btn-warning" onclick="renameFile('\${f.name}')" title="Rename">✏️</button>
-            <button class="btn btn-xs btn-danger" onclick="deleteFile('\${f.name}')" title="Delete">🗑️</button>
+            <button class="btn btn-xs" onclick="loadVideo('\${f.url}')" title="Load">â–¶</button>
+            <button class="btn btn-xs btn-warning" onclick="renameFile('\${f.name}')" title="Rename">âœï¸</button>
+            <button class="btn btn-xs btn-danger" onclick="deleteFile('\${f.name}')" title="Delete">ðŸ—‘ï¸</button>
         </div>
       \`;
       fileBrowser.appendChild(row);
@@ -623,7 +623,7 @@ browseBtn.onclick = async () => {
   } catch(e) {
     showToast(e.message, "error");
   } finally {
-    browseBtn.textContent = "📂 Browse Files";
+    browseBtn.textContent = "ðŸ“‚ Browse Files";
   }
 };
 
@@ -957,5 +957,5 @@ io.on("connection", (socket) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`🚀 Enterprise Server running at http://localhost:${PORT}`);
+  console.log(`ðŸš€ Enterprise Server running at http://localhost:${PORT}`);
 });
