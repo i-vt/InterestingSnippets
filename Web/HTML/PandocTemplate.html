@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="$lang$" xml:lang="$lang$"$if(dir)$ dir="$dir$"$endif$>
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+$for(author-meta)$
+  <meta name="author" content="$author-meta$" />
+$endfor$
+$if(date-meta)$
+  <meta name="dcterms.date" content="$date-meta$" />
+$endif$
+  <title>$if(title-prefix)$$title-prefix$ – $endif$$pagetitle$</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (typeof mermaid !== 'undefined') {
+        mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+      }
+    });
+  </script>
+
+  <style>
+    /* --- CSS VARIABLES --- */
+    :root {
+      /* Dark Theme (Default) */
+      --bg-body: #131114;
+      --bg-panel: #1a1418;
+      --bg-code: #221a20;
+      
+      --text-main: #f0e6e6;
+      --text-muted: #a09090;
+      --text-link: #f7a072;
+      
+      /* Accents */
+      --color-pink: #f4a6cd;
+      --color-coral: #f7a072;
+      --color-lavender: #c8a8e9;
+      --color-mint: #a8d5ba;
+      --color-beige: #e6d2a3;
+      
+      --border-light: rgba(244, 166, 205, 0.15);
+      --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.3);
+      
+      /* Components */
+      --code-max-height: 400px;
+      --lightbox-bg: rgba(0, 0, 0, 0.85);
+      --toc-width: 280px;
+      --content-max-width: 55em;
+    }
+
+    /* Light Theme */
+    :root[data-theme="light"] {
+      --bg-body: #f9f9f9;
+      --bg-panel: #ffffff;
+      --bg-code: #f2f2f2;
+      
+      --text-main: #2d2428;
+      --text-muted: #665a5f;
+      --text-link: #d96c3c;
+      
+      --color-pink: #d63384;
+      --color-coral: #d96c3c;
+      --color-lavender: #7952b3;
+      --color-mint: #0ca678;
+      --color-beige: #997b40;
+      
+      --border-light: rgba(0, 0, 0, 0.1);
+      --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.08);
+      --lightbox-bg: rgba(255, 255, 255, 0.95);
+    }
+
+    /* --- RESET & BASE --- */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; font-size: 16px; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      margin: 0;
+      line-height: 1.7;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    /* --- PROGRESS BAR --- */
+    #progress-container {
+      position: fixed; top: 0; left: 0; width: 100%; height: 4px;
+      background: transparent; z-index: 1001;
+    }
+    #progress-bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--color-pink), var(--color-coral));
+      transition: width 0.1s;
+    }
+
+    /* --- LAYOUT GRID --- */
+    .layout-wrapper {
+      display: grid;
+      grid-template-columns: 1fr min(var(--content-max-width), 90%) 1fr;
+      gap: 2rem;
+      min-height: 100vh;
+    }
+    main { grid-column: 2; padding: 4rem 0; }
+
+    /* --- TYPOGRAPHY --- */
+    h1, h2, h3, h4 { font-weight: 800; margin-top: 2em; margin-bottom: 0.8em; color: var(--color-pink); line-height: 1.2; }
+    h1 { font-size: 2.5rem; text-align: center; border-bottom: 2px solid var(--border-light); padding-bottom: 1.5rem; margin-top: 0; }
+    h2 { font-size: 1.8rem; color: var(--color-coral); border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem; }
+    h3 { font-size: 1.4rem; color: var(--color-lavender); }
+    
+    a { color: var(--text-link); text-decoration: none; font-weight: 600; border-bottom: 1px solid transparent; transition: 0.2s; }
+    a:hover { border-bottom-color: var(--text-link); }
+
+    .anchor { opacity: 0; margin-left: -1em; padding-right: 0.5em; color: var(--text-muted); text-decoration: none; border: none; transition: opacity 0.2s; }
+    h1:hover .anchor, h2:hover .anchor, h3:hover .anchor { opacity: 1; }
+
+    /* --- CODE BLOCKS --- */
+    pre {
+      background: var(--bg-code);
+      padding: 1rem 0;
+      border-radius: 8px;
+      border: 1px solid var(--border-light);
+      margin: 1.5rem 0;
+      white-space: pre-wrap; 
+      word-break: break-all;
+    }
+    
+    code { 
+        font-family: 'JetBrains Mono', monospace; 
+        font-size: 0.9em; 
+        color: var(--color-mint); 
+        white-space: pre-wrap;
+        word-break: break-all;
+        overflow-wrap: anywhere;
+    }
+    
+    p code { 
+        background: var(--bg-code); 
+        padding: 0.2em 0.4em; 
+        border-radius: 4px; 
+        border: 1px solid var(--border-light); 
+    }
+
+    /* Code Line Layout */
+    .code-line {
+        display: grid;
+        grid-template-columns: 3.5rem 1fr;
+        gap: 1rem;
+        line-height: 1.5;
+        padding: 0 1rem;
+    }
+    .code-line:hover { background-color: rgba(255,255,255,0.03); }
+    .ln { text-align: right; color: var(--text-muted); opacity: 0.5; user-select: none; font-size: 0.85em; padding-top: 1px; }
+
+    /* --- CODE EXPANSION (Advanced Sticky Button) --- */
+    .code-wrapper { 
+        position: relative; 
+        margin: 2rem 0; 
+        background: var(--bg-code); 
+        border-radius: 8px; 
+    }
+    
+    .code-collapsed pre {
+      max-height: var(--code-max-height);
+      overflow-y: hidden;
+      mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+      border-bottom: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+      margin-bottom: 0;
+    }
+    
+    /* 1. Collapsed State: Full width bar at bottom */
+    .code-collapsed .expand-btn {
+      display: block; width: 100%; padding: 10px; text-align: center;
+      background: var(--bg-panel); border: 1px solid var(--border-light); border-top: none;
+      color: var(--color-coral); font-weight: 600; cursor: pointer;
+      border-radius: 0 0 8px 8px; transition: 0.2s;
+    }
+    .code-collapsed .expand-btn:hover { background: var(--bg-body); color: var(--color-pink); }
+
+    /* 2. Expanded State: Floating Sticky Arrow */
+    .code-expanded .expand-btn {
+      position: sticky; /* Floats within the code block */
+      bottom: 20px;     /* Sticks 20px from bottom of viewport */
+      left: 10px;       /* Puts it on the left gutter */
+      margin-left: 10px;
+      margin-top: -3rem; /* Pull it up into the block area */
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      background: var(--color-pink);
+      color: var(--bg-panel);
+      font-size: 1.2rem;
+      border: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 20;
+      opacity: 0.8;
+      transition: transform 0.2s, opacity 0.2s;
+    }
+    
+    .code-expanded .expand-btn:hover {
+        opacity: 1;
+        transform: scale(1.1);
+        background: var(--color-coral);
+    }
+    
+    /* Copy Button */
+    .copy-btn {
+      position: absolute; top: 0.5rem; right: 0.5rem;
+      background: var(--bg-panel); border: 1px solid var(--border-light);
+      color: var(--text-muted); border-radius: 4px; padding: 4px 8px;
+      font-size: 0.75rem; cursor: pointer; opacity: 0; transition: 0.2s; z-index: 10;
+    }
+    .code-wrapper:hover .copy-btn { opacity: 1; }
+
+    /* --- IMAGES & LIGHTBOX --- */
+    img {
+      max-width: 100%; height: auto; border-radius: 8px;
+      box-shadow: var(--shadow-soft); display: block; margin: 2rem auto;
+      cursor: zoom-in; transition: transform 0.2s;
+    }
+    img:hover { transform: scale(1.01); }
+
+    .lightbox {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: var(--lightbox-bg); z-index: 2000;
+      display: flex; justify-content: center; align-items: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.25s; backdrop-filter: blur(5px);
+    }
+    .lightbox.active { opacity: 1; pointer-events: all; cursor: zoom-out; }
+    .lightbox img { max-width: 90vw; max-height: 90vh; box-shadow: 0 0 50px rgba(0,0,0,0.5); cursor: default; }
+
+    /* --- TABLE OF CONTENTS & SIDEBAR --- */
+    #TOC { display: none; }
+    
+    @media (min-width: 1300px) {
+      .layout-wrapper { grid-template-columns: 1fr var(--content-max-width) var(--toc-width) 1fr; }
+      #TOC {
+        display: block; grid-column: 3; position: sticky; top: 2rem;
+        height: calc(100vh - 4rem); overflow-y: auto; padding-left: 2rem;
+        border-left: 1px solid var(--border-light); font-size: 0.85rem;
+      }
+      
+      #toc-search {
+        width: 100%; padding: 8px; margin-bottom: 1rem;
+        background: var(--bg-panel); border: 1px solid var(--border-light);
+        color: var(--text-main); border-radius: 4px;
+      }
+      #toc-search::placeholder { color: var(--text-muted); }
+
+      #TOC ul { list-style: none; padding: 0; margin: 0; }
+      #TOC a { color: var(--text-muted); display: block; padding: 4px 0; border: none; transition: 0.2s; }
+      #TOC a:hover { color: var(--text-main); transform: translateX(2px); }
+      #TOC a.active { color: var(--color-pink); font-weight: bold; border-left: 2px solid var(--color-pink); padding-left: 10px; margin-left: -12px; }
+      #TOC ul ul { padding-left: 1rem; margin-top: 0.25rem; border-left: 1px solid var(--border-light); }
+    }
+
+    /* --- METADATA HEADER --- */
+    header { text-align: center; margin-bottom: 4rem; }
+    .subtitle { font-size: 1.5rem; color: var(--text-muted); font-weight: 300; margin-top: -0.5rem; }
+    .meta-bar { 
+      display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; 
+      margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-muted); 
+    }
+    .meta-item { display: flex; align-items: center; gap: 0.5rem; }
+    
+    /* --- INTERACTIVE BUTTONS --- */
+    .float-btn {
+      position: fixed; right: 2rem; width: 3rem; height: 3rem;
+      border-radius: 50%; background: var(--bg-panel); border: 1px solid var(--border-light);
+      cursor: pointer; display: grid; place-items: center; z-index: 100;
+      box-shadow: var(--shadow-soft); transition: transform 0.2s;
+    }
+    .float-btn:hover { transform: scale(1.1); }
+    
+    #theme-toggle { top: 2rem; }
+    #back-to-top { bottom: 2rem; background: var(--color-pink); color: white; border: none; opacity: 0; pointer-events: none; }
+    #back-to-top.visible { opacity: 1; pointer-events: all; }
+
+    /* --- ADMONITIONS --- */
+    .note, .tip, .warning { padding: 1rem 1.5rem; margin: 1.5rem 0; border-left: 4px solid; background: var(--bg-panel); border-radius: 0 8px 8px 0; }
+    .note { border-color: var(--color-mint); background: rgba(168, 213, 186, 0.05); }
+    .warning { border-color: var(--color-coral); background: rgba(247, 160, 114, 0.05); }
+  </style>
+$for(css)$
+  <link rel="stylesheet" href="$css$" />
+$endfor$
+</head>
+<body>
+
+  <div id="progress-container"><div id="progress-bar"></div></div>
+
+  <button class="float-btn" id="theme-toggle" title="Switch Theme">🌙</button>
+  <button class="float-btn" id="back-to-top" title="Top">↑</button>
+
+  <div id="lightbox" class="lightbox"></div>
+
+  <div class="layout-wrapper">
+    <main>
+      <header>
+        $if(title)$
+        <h1 class="title">$title$</h1>
+        $if(subtitle)$<p class="subtitle">$subtitle$</p>$endif$
+        $endif$
+        
+        <div class="meta-bar">
+          $for(author)$
+          <span class="meta-item">👤 $author$</span>
+          $endfor$
+          $if(date)$
+          <span class="meta-item">📅 $date$</span>
+          $endif$
+        </div>
+      </header>
+
+      $if(abstract)$
+      <div class="note">
+        <strong>Abstract:</strong> $abstract$
+      </div>
+      $endif$
+
+      $body$
+    </main>
+
+    $if(toc)$
+    <nav id="TOC">
+      <input type="text" id="toc-search" placeholder="Filter contents..." autocomplete="off">
+      $table-of-contents$
+    </nav>
+    $endif$
+  </div>
+
+<script>
+(function() {
+  /* --- 1. PROGRESS BAR --- */
+  window.addEventListener('scroll', () => {
+    const scrollTotal = document.documentElement.scrollHeight - window.innerHeight;
+    const scrollCurrent = window.scrollY;
+    
+    if (scrollTotal > 0) {
+        document.getElementById('progress-bar').style.width = (scrollCurrent / scrollTotal * 100) + '%';
+    }
+    
+    const backBtn = document.getElementById('back-to-top');
+    if (backBtn) backBtn.classList.toggle('visible', scrollCurrent > 400);
+  });
+
+  const backBtn = document.getElementById('back-to-top');
+  if(backBtn) backBtn.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+
+
+  /* --- 2. SEARCH / FILTER TOC --- */
+  const searchInput = document.getElementById('toc-search');
+  if (searchInput) {
+    searchInput.addEventListener('keyup', (e) => {
+      const term = e.target.value.toLowerCase();
+      const links = document.querySelectorAll('#TOC a');
+      links.forEach(link => {
+        const text = link.innerText.toLowerCase();
+        const listItem = link.parentElement;
+        listItem.style.display = text.includes(term) ? '' : 'none';
+      });
+    });
+  }
+
+
+  /* --- 3. THEME MANAGER --- */
+  const toggleBtn = document.getElementById('theme-toggle');
+  const savedTheme = localStorage.getItem('theme');
+  let isLight = savedTheme === 'light';
+  
+  function applyTheme() {
+    if (isLight) {
+      document.documentElement.setAttribute('data-theme', 'light');
+      if(toggleBtn) toggleBtn.innerText = '☀️';
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+      if(toggleBtn) toggleBtn.innerText = '🌙';
+    }
+  }
+  applyTheme();
+  
+  if(toggleBtn) {
+      toggleBtn.onclick = () => {
+        isLight = !isLight;
+        localStorage.setItem('theme', isLight ? 'light' : 'dark');
+        applyTheme();
+      };
+  }
+
+
+  /* --- 4. LIGHTBOX --- */
+  const lightbox = document.getElementById('lightbox');
+  document.querySelectorAll('main img').forEach(img => {
+    img.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const clone = img.cloneNode();
+      if(lightbox) {
+          lightbox.innerHTML = '';
+          lightbox.appendChild(clone);
+          lightbox.classList.add('active');
+          document.body.style.overflow = 'hidden';
+      }
+    });
+  });
+  
+  if(lightbox) {
+      lightbox.onclick = () => {
+        lightbox.classList.remove('active');
+        document.body.style.overflow = '';
+      };
+  }
+
+
+  /* --- 5. CODE BLOCKS --- */
+  document.querySelectorAll('pre').forEach(pre => {
+    const codeTag = pre.querySelector('code');
+    if (!codeTag) return;
+
+    // A. Wrap PRE
+    const wrapper = document.createElement('div');
+    wrapper.className = 'code-wrapper';
+    pre.parentNode.insertBefore(wrapper, pre);
+    wrapper.appendChild(pre);
+
+    // B. Add Line Numbers
+    const rawContent = codeTag.innerHTML;
+    codeTag.innerHTML = ''; 
+    const lines = rawContent.split(/\r\n|\r|\n/);
+    if (lines[lines.length - 1].trim() === '') lines.pop();
+
+    lines.forEach((line, index) => {
+        const lineDiv = document.createElement('div');
+        lineDiv.className = 'code-line';
+        const numSpan = document.createElement('span');
+        numSpan.className = 'ln';
+        numSpan.innerText = index + 1;
+        const contentSpan = document.createElement('span');
+        contentSpan.className = 'lc';
+        contentSpan.innerHTML = line || ' '; 
+        lineDiv.appendChild(numSpan);
+        lineDiv.appendChild(contentSpan);
+        codeTag.appendChild(lineDiv);
+    });
+
+    // C. Add Copy Button
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.textContent = 'Copy';
+    copyBtn.onclick = () => {
+      const textToCopy = Array.from(codeTag.querySelectorAll('.lc')).map(s => s.innerText).join('\n');
+      navigator.clipboard.writeText(textToCopy);
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => copyBtn.textContent = 'Copy', 2000);
+    };
+    wrapper.appendChild(copyBtn);
+
+    // D. Smart Expand/Collapse
+    const MAX_HEIGHT = 400; // px
+    const MAX_CHARS = 1000; // characters
+    const charLength = rawContent.length;
+
+    if (pre.scrollHeight > MAX_HEIGHT || charLength > MAX_CHARS) {
+      wrapper.classList.add('code-collapsed');
+      
+      const toggleBtn = document.createElement('button');
+      toggleBtn.className = 'expand-btn';
+      toggleBtn.textContent = '↓ Show More';
+      
+      toggleBtn.onclick = () => {
+        if (wrapper.classList.contains('code-collapsed')) {
+            // Expand
+            wrapper.classList.remove('code-collapsed');
+            wrapper.classList.add('code-expanded');
+            toggleBtn.innerHTML = '&#8593;'; // Up Arrow HTML entity
+            toggleBtn.setAttribute('title', 'Collapse Code');
+        } else {
+            // Collapse
+            wrapper.classList.remove('code-expanded');
+            wrapper.classList.add('code-collapsed');
+            toggleBtn.textContent = '↓ Show More';
+            toggleBtn.removeAttribute('title');
+            // Scroll back to top of block
+            wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      };
+      
+      wrapper.appendChild(toggleBtn);
+    }
+  });
+
+
+  /* --- 6. SCROLLSPY --- */
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        document.querySelectorAll('#TOC a').forEach(a => a.classList.remove('active'));
+        const link = document.querySelector(`#TOC a[href="#${entry.target.id}"]`);
+        if (link) {
+          link.classList.add('active');
+          link.scrollIntoView({ block: 'nearest' });
+        }
+      }
+    });
+  }, { rootMargin: '-100px 0px -66%' });
+
+  document.querySelectorAll('h1, h2, h3').forEach(h => {
+    if (h.id) {
+      observer.observe(h);
+      const a = document.createElement('a');
+      a.className = 'anchor';
+      a.href = '#' + h.id;
+      a.textContent = '¶';
+      h.prepend(a);
+    }
+  });
+
+})();
+</script>
+$for(include-after)$
+$include-after$
+$endfor$
+</body>
+</html>
