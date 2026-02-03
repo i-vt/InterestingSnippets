@@ -1,10 +1,8 @@
-https://trends.google.com/trending/rss?geo=US
 http://feeds.trendmicro.com/TrendMicroResearch
 https://any.run/cybersecurity-blog/feed/
 https://blog.itsecurityexpert.co.uk/feeds/posts/default?alt=atom
 https://cyberbuilders.substack.com/feed
 https://cyberhoot.com/category/blog/feed/
-# https://levelblue.com/site/blog-all-rss removed because has AI slop
 https://cyble.com/feed/
 https://dataprivacymanager.net/feed/
 https://erdalozkaya.com/feed/
