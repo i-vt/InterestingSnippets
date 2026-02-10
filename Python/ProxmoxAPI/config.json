@@ -1,0 +1,7 @@
+{
+    "PROXMOX_HOST": "proxmox.home.local",
+    "PROXMOX_PORT": 8006,
+    "PROXMOX_USER": "root@pam",
+    "TOKEN_ID": "token_id_goes_here_as_entered_during_setup",
+    "TOKEN_SECRET": "43d54016-ca6a-40f5-950c-a53da87232fa"
+}
