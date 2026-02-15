@@ -49,8 +49,8 @@ export HISTFILESIZE=200000      # on-disk lines
 export HISTCONTROL=ignoredups:erasedups:ignorespace
 export HISTTIMEFORMAT='%F %T  ' # "YYYY-MM-DD HH:MM:SS  <cmd>"
 
-# Ignore noisy commands
-export HISTIGNORE='ls:ls *:ll:la:cd:pwd:clear:history:exit:bg:fg:jobs'
+# Ignore noisy commands (turned off b/c irritates me)
+# export HISTIGNORE='ls:ls *:ll:la:cd:pwd:clear:history:exit:bg:fg:jobs'
 
 # Append to the history file and store multi-line entries
 shopt -s histappend
