@@ -1,7 +1,6 @@
 http://feeds.trendmicro.com/TrendMicroResearch
 https://any.run/cybersecurity-blog/feed/
 https://blog.itsecurityexpert.co.uk/feeds/posts/default?alt=atom
-https://cyberbuilders.substack.com/feed
 https://cyberhoot.com/category/blog/feed/
 https://cyble.com/feed/
 https://dataprivacymanager.net/feed/
