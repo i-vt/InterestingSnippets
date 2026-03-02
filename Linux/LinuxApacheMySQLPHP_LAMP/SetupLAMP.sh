@@ -1,4 +1,3 @@
-
 #!/bin/bash
 set -e
 
@@ -9,7 +8,6 @@ MYSQL_SUPERUSER="superuser"
 MYSQL_SUPERPASS="StrongPassword123!"
 BIND_ADDRESS="0.0.0.0"
 MYSQL_CONF_FILE="/etc/mysql/mysql.conf.d/mysqld.cnf"
-MYSQL_APT_DEB="mysql-apt-config_0.8.29-1_all.deb"
 
 # -----------------------------
 # APACHE + PHP INSTALLATION
@@ -54,11 +52,25 @@ sudo apt-get autoclean
 echo "🗑️ Removing MySQL data and config directories..."
 sudo rm -rf /var/lib/mysql /var/log/mysql /etc/mysql
 
-echo "🔧 Installing MySQL APT Repository package..."
-if [ ! -f "$MYSQL_APT_DEB" ]; then
-    wget https://dev.mysql.com/get/$MYSQL_APT_DEB
+echo "🔍 Fetching the latest MySQL APT repository package dynamically..."
+# Scrape the MySQL apt repo page for the latest version string
+LATEST_DEB=$(curl -s https://dev.mysql.com/downloads/repo/apt/ | grep -Eo 'mysql-apt-config_[0-9\.\-]+_all\.deb' | head -n 1)
+
+if [ -z "$LATEST_DEB" ]; then
+    echo "⚠️ Dynamic fetch failed (webpage structure might have changed)."
+    # CHECK FOR NEWER VERSION AT https://dev.mysql.com/downloads/repo/apt/
+    LATEST_DEB="mysql-apt-config_0.8.36-1_all.deb" 
+    echo "⚠️ Falling back to known version: $LATEST_DEB"
+else
+    echo "✅ Found latest version: $LATEST_DEB"
 fi
-sudo DEBIAN_FRONTEND=noninteractive dpkg -i $MYSQL_APT_DEB
+
+echo "⬇️ Downloading and installing repository package..."
+wget -q "https://dev.mysql.com/get/$LATEST_DEB" -O "$LATEST_DEB"
+sudo DEBIAN_FRONTEND=noninteractive dpkg -i "$LATEST_DEB"
+
+# Clean up the downloaded .deb file immediately
+rm "$LATEST_DEB"
 
 echo "📦 Installing MySQL Server..."
 sudo apt-get update
