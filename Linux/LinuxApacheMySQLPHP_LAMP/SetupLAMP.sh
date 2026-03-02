@@ -84,9 +84,9 @@ echo "🔒 Securing MySQL root account..."
 AUTH_METHOD=$(sudo mysql -e "SELECT plugin FROM mysql.user WHERE User='root' AND Host='localhost';" --skip-column-names 2>/dev/null || echo "unknown")
 
 if [[ "$AUTH_METHOD" == "auth_socket" ]] || [[ "$AUTH_METHOD" == "" ]]; then
-    echo "Root user uses auth_socket or no plugin; switching to mysql_native_password..."
+    echo "Root user uses auth_socket or no plugin; setting password with modern defaults..."
     sudo mysql <<EOF
-ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '${MYSQL_SUPERPASS}';
+ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY '${MYSQL_SUPERPASS}';
 EOF
 fi
 
