@@ -3,7 +3,7 @@
 # Complete VNC/noVNC Installer for Clean Debian OS - FIXED VERSION
 # This script installs and configures VNC with noVNC web interface from scratch
 # Compatible with Debian 11/12 and Ubuntu 20.04/22.04/24.04
-# Includes fixes for session crashes and connection issues
+# Includes fixes for session crashes, connection issues, and hostname resolution
 
 set -euo pipefail
 
@@ -65,6 +65,20 @@ detect_os() {
     if [[ "$OS" != "debian" && "$OS" != "ubuntu" ]]; then
         print_error "This script only supports Debian and Ubuntu"
         exit 1
+    fi
+}
+
+# Function to ensure hostname is resolvable
+fix_hostname_resolution() {
+    print_status "Checking hostname resolution..."
+    local current_hostname=$(hostname)
+    
+    if ! ping -c 1 "$current_hostname" &> /dev/null; then
+        print_warning "Hostname '$current_hostname' not resolvable. Fixing /etc/hosts..."
+        echo "127.0.0.1 $current_hostname" >> /etc/hosts
+        print_success "Hostname resolution fixed."
+    else
+        print_success "Hostname resolves correctly."
     fi
 }
 
@@ -928,6 +942,7 @@ main() {
     # Preliminary checks
     check_root
     detect_os
+    fix_hostname_resolution
     
     # Create vncuser first
     create_vncuser
@@ -956,6 +971,7 @@ main() {
             print_success "Installation completed successfully!"
             echo
             print_status "The VNC server is now running with these improvements:"
+            echo "  ✓ Hostname resolution dynamically fixed"
             echo "  ✓ Non-sudoer user 'vncuser' created"
             echo "  ✓ Auto-generated passwords saved securely"
             echo "  ✓ TigerVNC migration issue fixed"
