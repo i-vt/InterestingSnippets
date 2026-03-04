@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Body Metrics Dashboard (BMI + WHtR + PI + BSA + Body Fat)</title>
+  <style>
+    :root{
+      --bg: #0b1020;
+      --panel: rgba(255,255,255,.06);
+      --panel2: rgba(255,255,255,.09);
+      --stroke: rgba(255,255,255,.14);
+      --text: rgba(255,255,255,.90);
+      --muted: rgba(255,255,255,.65);
+      --good: #31d57a;
+      --warn: #ffcc66;
+      --bad:  #ff5a7a;
+      --accent:#7aa7ff;
+      --shadow: 0 18px 50px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background:
+        radial-gradient(1200px 600px at 12% 18%, rgba(122,167,255,.20), transparent 55%),
+        radial-gradient(900px 520px at 88% 30%, rgba(49,213,122,.16), transparent 60%),
+        radial-gradient(1000px 700px at 40% 110%, rgba(255,90,122,.14), transparent 60%),
+        var(--bg);
+      color:var(--text);
+    }
+    header{
+      padding: 28px 22px 10px;
+      max-width: 1200px;
+      margin: 0 auto;
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap: 16px;
+    }
+    .title{
+      display:flex; flex-direction:column; gap: 6px;
+    }
+    h1{
+      margin:0;
+      font-size: 22px;
+      letter-spacing:.2px;
+      font-weight: 750;
+    }
+    .subtitle{
+      margin:0;
+      color:var(--muted);
+      font-size: 13px;
+      line-height: 1.3;
+      max-width: 70ch;
+    }
+    .chip{
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 8px 12px;
+      border: 1px solid var(--stroke);
+      border-radius: 999px;
+      background: rgba(255,255,255,.04);
+      color: var(--muted);
+      font-size: 12px;
+      user-select:none;
+    }
+    .dot{
+      width:8px; height:8px; border-radius:999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(122,167,255,.15);
+    }
+
+    main{
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 14px 22px 34px;
+      display:grid;
+      grid-template-columns: 360px 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 980px){
+      main{grid-template-columns: 1fr}
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.05));
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card header{
+      padding: 14px 16px 10px;
+      max-width:unset;
+      margin:0;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: rgba(0,0,0,.10);
+    }
+    .card h2{
+      margin:0;
+      font-size: 14px;
+      font-weight: 750;
+      letter-spacing:.2px;
+    }
+    .card .content{ padding: 14px 16px 16px; }
+
+    .inputs{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .inputs .full{ grid-column: 1 / -1; }
+    label{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    input, select{
+      width:100%;
+      padding: 10px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      outline:none;
+    }
+    input:focus, select:focus{
+      border-color: rgba(122,167,255,.55);
+      box-shadow: 0 0 0 4px rgba(122,167,255,.12);
+    }
+    .row{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      margin-top: 12px;
+    }
+    .btn{
+      cursor:pointer;
+      appearance:none;
+      border: 1px solid rgba(255,255,255,.16);
+      background: linear-gradient(180deg, rgba(122,167,255,.22), rgba(122,167,255,.12));
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 14px;
+      font-weight: 700;
+      letter-spacing:.2px;
+      width: 100%;
+      box-shadow: 0 10px 25px rgba(0,0,0,.25);
+      transition: transform .06s ease, filter .2s ease;
+    }
+    .btn:active{ transform: translateY(1px); }
+    .btn.secondary{
+      background: rgba(255,255,255,.05);
+    }
+    .btnWrap{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      width:100%;
+    }
+
+    .dashboard{
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 16px;
+    }
+    .metric{
+      grid-column: span 6;
+      min-height: 260px;
+    }
+    @media (max-width: 980px){
+      .metric{ grid-column: span 12; }
+    }
+    .metric .content{
+      display:grid;
+      grid-template-columns: 180px 1fr;
+      gap: 14px;
+      align-items:center;
+    }
+    @media (max-width: 560px){
+      .metric .content{ grid-template-columns: 1fr; }
+    }
+    .gaugeWrap{
+      display:flex; align-items:center; justify-content:center;
+      padding: 6px 0;
+    }
+    canvas{ width: 170px; height: 170px; }
+    .metricValue{
+      display:flex; flex-direction:column; gap: 6px;
+    }
+    .big{
+      font-size: 28px;
+      font-weight: 850;
+      letter-spacing:.2px;
+      line-height: 1.05;
+    }
+    .unit{
+      font-size: 12px;
+      color: var(--muted);
+      margin-left: 6px;
+      font-weight: 650;
+    }
+    .badge{
+      display:inline-flex; align-items:center; gap:8px;
+      width: fit-content;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.04);
+      color: var(--muted);
+      font-size: 12px;
+      user-select:none;
+    }
+    .badge .pill{
+      width: 10px; height: 10px; border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(122,167,255,.12);
+    }
+    .explain{
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .legend{
+      display:flex; gap: 10px; flex-wrap:wrap;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .key{
+      display:inline-flex; align-items:center; gap:6px;
+      padding: 6px 8px;
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 999px;
+      background: rgba(0,0,0,.10);
+    }
+    .swatch{ width:10px; height:10px; border-radius: 3px; }
+    .footerNote{
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 22px 28px;
+      color: rgba(255,255,255,.55);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title">
+      <h1>Body Metrics Dashboard</h1>
+      <p class="subtitle">
+        Enter your measurements to compute <b>BMI</b>, <b>Waist-to-Height Ratio</b>, <b>Ponderal Index</b>, <b>Body Surface Area</b>,
+        and a <b>BMI-based Body Fat % estimate</b>. Dials update instantly.
+      </p>
+    </div>
+    <div class="chip" title="All calculations are estimates.">
+      <span class="dot"></span>
+      No data stored • Runs locally
+    </div>
+  </header>
+
+  <main>
+    <!-- Inputs -->
+    <section class="card">
+      <header>
+        <h2>Inputs</h2>
+        <span class="chip"><span class="dot"></span><span class="mono">metric / imperial</span></span>
+      </header>
+      <div class="content">
+        <div class="inputs">
+          <label class="full">
+            Units
+            <select id="units">
+              <option value="metric" selected>Metric (cm, kg)</option>
+              <option value="imperial">Imperial (ft/in, lb)</option>
+            </select>
+          </label>
+
+          <label id="heightMetricLabel">
+            Height (cm)
+            <input id="heightCm" type="number" min="50" max="260" step="0.1" placeholder="e.g., 175" value="175">
+          </label>
+
+          <label id="weightMetricLabel">
+            Weight (kg)
+            <input id="weightKg" type="number" min="20" max="300" step="0.1" placeholder="e.g., 72" value="72">
+          </label>
+
+          <label id="heightImperialLabel" style="display:none">
+            Height (ft / in)
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+              <input id="heightFt" type="number" min="3" max="8" step="1" placeholder="ft" value="5">
+              <input id="heightIn" type="number" min="0" max="11" step="1" placeholder="in" value="9">
+            </div>
+          </label>
+
+          <label id="weightImperialLabel" style="display:none">
+            Weight (lb)
+            <input id="weightLb" type="number" min="45" max="700" step="0.1" placeholder="e.g., 160" value="159">
+          </label>
+
+          <label class="full">
+            Waist circumference <span style="opacity:.8">(optional, but needed for WHtR)</span>
+            <input id="waist" type="number" min="30" max="200" step="0.1" placeholder="cm (metric) or in (imperial)" value="85">
+          </label>
+
+          <label>
+            Age
+            <input id="age" type="number" min="1" max="120" step="1" value="30">
+          </label>
+
+          <label>
+            Sex (for body fat estimate)
+            <select id="sex">
+              <option value="male" selected>Male</option>
+              <option value="female">Female</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="row">
+          <div class="btnWrap">
+            <button class="btn" id="calcBtn">Update</button>
+            <button class="btn secondary" id="resetBtn" title="Reset to sample values">Reset</button>
+          </div>
+        </div>
+
+        <div class="legend" aria-label="Dial colors legend">
+          <span class="key"><span class="swatch" style="background:var(--good)"></span>Good</span>
+          <span class="key"><span class="swatch" style="background:var(--warn)"></span>Borderline</span>
+          <span class="key"><span class="swatch" style="background:var(--bad)"></span>High risk</span>
+        </div>
+
+        <p class="explain">
+          Tips: WHtR uses the rule-of-thumb <span class="mono">waist / height</span> with <span class="mono">0.5</span> as a common cutoff.
+          Body fat % here uses the Deurenberg BMI-based estimate.
+        </p>
+      </div>
+    </section>
+
+    <!-- Dashboard -->
+    <section class="dashboard">
+      <article class="card metric" style="grid-column: span 6;">
+        <header>
+          <h2>BMI</h2>
+          <span class="chip"><span class="dot"></span><span class="mono">kg/m²</span></span>
+        </header>
+        <div class="content">
+          <div class="gaugeWrap"><canvas id="gBMI" width="220" height="220"></canvas></div>
+          <div class="metricValue">
+            <div><span class="big" id="vBMI">—</span><span class="unit">kg/m²</span></div>
+            <div class="badge" id="bBMI"><span class="pill"></span><span id="tBMI">Enter data</span></div>
+            <div class="explain" id="eBMI">Uses height + weight. Categories: underweight &lt;18.5, normal 18.5–24.9, overweight 25–29.9, obese ≥30.</div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card metric" style="grid-column: span 6;">
+        <header>
+          <h2>Waist-to-Height Ratio (WHtR)</h2>
+          <span class="chip"><span class="dot"></span><span class="mono">waist/height</span></span>
+        </header>
+        <div class="content">
+          <div class="gaugeWrap"><canvas id="gWHtR" width="220" height="220"></canvas></div>
+          <div class="metricValue">
+            <div><span class="big" id="vWHtR">—</span><span class="unit">ratio</span></div>
+            <div class="badge" id="bWHtR"><span class="pill"></span><span id="tWHtR">Enter waist + height</span></div>
+            <div class="explain" id="eWHtR">Typically: &lt;0.40 low, 0.40–0.49 healthy, 0.50–0.59 increased risk, ≥0.60 high risk.</div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card metric" style="grid-column: span 6;">
+        <header>
+          <h2>Ponderal Index (PI)</h2>
+          <span class="chip"><span class="dot"></span><span class="mono">kg/m³</span></span>
+        </header>
+        <div class="content">
+          <div class="gaugeWrap"><canvas id="gPI" width="220" height="220"></canvas></div>
+          <div class="metricValue">
+            <div><span class="big" id="vPI">—</span><span class="unit">kg/m³</span></div>
+            <div class="badge" id="bPI"><span class="pill"></span><span id="tPI">Enter data</span></div>
+            <div class="explain" id="ePI">Uses height + weight: <span class="mono">weight / height³</span>. Not as standardized as BMI for categories; dial shows a reasonable adult range.</div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card metric" style="grid-column: span 6;">
+        <header>
+          <h2>Body Surface Area (BSA)</h2>
+          <span class="chip"><span class="dot"></span><span class="mono">m²</span></span>
+        </header>
+        <div class="content">
+          <div class="gaugeWrap"><canvas id="gBSA" width="220" height="220"></canvas></div>
+          <div class="metricValue">
+            <div><span class="big" id="vBSA">—</span><span class="unit">m²</span></div>
+            <div class="badge" id="bBSA"><span class="pill"></span><span id="tBSA">Enter data</span></div>
+            <div class="explain" id="eBSA">Mosteller formula: <span class="mono">sqrt(height(cm) × weight(kg) / 3600)</span>. Common in medical dosing contexts.</div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card metric" style="grid-column: span 12;">
+        <header>
+          <h2>Body Fat % (BMI-based estimate)</h2>
+          <span class="chip"><span class="dot"></span><span class="mono">%</span></span>
+        </header>
+        <div class="content" style="grid-template-columns: 220px 1fr;">
+          <div class="gaugeWrap"><canvas id="gBF" width="220" height="220"></canvas></div>
+          <div class="metricValue">
+            <div><span class="big" id="vBF">—</span><span class="unit">%</span></div>
+            <div class="badge" id="bBF"><span class="pill"></span><span id="tBF">Enter data</span></div>
+            <div class="explain" id="eBF">
+              Deurenberg estimate: <span class="mono">(1.20 × BMI) + (0.23 × Age) − (10.8 × Sex) − 5.4</span>,
+              where Sex = 1 male, 0 female. This is a rough estimate and can differ from measured body fat.
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <div class="footerNote">
+    <b>Disclaimer:</b> These metrics are informational estimates and not medical advice. Risk thresholds vary by population, age, and clinical context.
+    If you want, you can extend this page with CSV export, history charts, or additional indices (e.g., ABSI, RFM).
+  </div>
+
+  <script>
+    // ---------- Utilities ----------
+    const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+    const round = (x, d=1) => (Number.isFinite(x) ? Number(x.toFixed(d)) : NaN);
+
+    function getCSS(varName){
+      return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+    }
+
+    // Convert input to metric
+    function readInputsAsMetric(){
+      const units = document.getElementById('units').value;
+
+      let heightM, heightCm, weightKg, waistCm;
+
+      if(units === 'metric'){
+        heightCm = parseFloat(document.getElementById('heightCm').value);
+        weightKg = parseFloat(document.getElementById('weightKg').value);
+        waistCm  = parseFloat(document.getElementById('waist').value);
+      } else {
+        const ft = parseFloat(document.getElementById('heightFt').value);
+        const inch = parseFloat(document.getElementById('heightIn').value);
+        const totalIn = (Number.isFinite(ft)?ft:0)*12 + (Number.isFinite(inch)?inch:0);
+        heightCm = totalIn * 2.54;
+
+        const weightLb = parseFloat(document.getElementById('weightLb').value);
+        weightKg = weightLb / 2.2046226218;
+
+        const waistIn = parseFloat(document.getElementById('waist').value);
+        waistCm = waistIn * 2.54;
+      }
+
+      heightM = heightCm / 100;
+      const age = parseFloat(document.getElementById('age').value);
+      const sex = document.getElementById('sex').value; // male|female
+
+      return { units, heightCm, heightM, weightKg, waistCm, age, sex };
+    }
+
+    // ---------- Calculators ----------
+    function calcBMI(heightM, weightKg){
+      if(!(heightM>0 && weightKg>0)) return NaN;
+      return weightKg / (heightM*heightM);
+    }
+    function calcWHtR(waistCm, heightCm){
+      if(!(waistCm>0 && heightCm>0)) return NaN;
+      return waistCm / heightCm;
+    }
+    function calcPI(heightM, weightKg){
+      if(!(heightM>0 && weightKg>0)) return NaN;
+      return weightKg / Math.pow(heightM, 3);
+    }
+    function calcBSA(heightCm, weightKg){
+      if(!(heightCm>0 && weightKg>0)) return NaN;
+      return Math.sqrt((heightCm * weightKg) / 3600);
+    }
+    function calcBodyFatPct_Deurenberg(bmi, age, sex){
+      if(!(Number.isFinite(bmi) && age>0)) return NaN;
+      const sexVal = (sex === 'male') ? 1 : 0;
+      return (1.20*bmi) + (0.23*age) - (10.8*sexVal) - 5.4;
+    }
+
+    // ---------- Classification helpers ----------
+    function bmiLabel(bmi){
+      if(!Number.isFinite(bmi)) return {label: '—', tone: 'muted'};
+      if(bmi < 18.5) return {label:'Underweight', tone:'warn'};
+      if(bmi < 25)   return {label:'Normal', tone:'good'};
+      if(bmi < 30)   return {label:'Overweight', tone:'warn'};
+      return {label:'Obese', tone:'bad'};
+    }
+
+    function whtrLabel(r){
+      if(!Number.isFinite(r)) return {label:'—', tone:'muted'};
+      if(r < 0.40) return {label:'Low', tone:'warn'};
+      if(r < 0.50) return {label:'Healthy', tone:'good'};
+      if(r < 0.60) return {label:'Increased risk', tone:'warn'};
+      return {label:'High risk', tone:'bad'};
+    }
+
+    function rangeTone(value, goodRange, warnRange, hardMin, hardMax){
+      // goodRange: [a,b] best
+      // warnRange: [a,b] acceptable-ish
+      // outside warnRange => bad
+      if(!Number.isFinite(value)) return 'muted';
+      if(value >= goodRange[0] && value <= goodRange[1]) return 'good';
+      if(value >= warnRange[0] && value <= warnRange[1]) return 'warn';
+      if(value < hardMin || value > hardMax) return 'bad';
+      return 'bad';
+    }
+
+    // ---------- Gauge drawing ----------
+    function drawGauge(canvas, opts){
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      ctx.clearRect(0,0,W,H);
+
+      const cx = W/2, cy = H/2;
+      const r = Math.min(W,H)*0.38;
+
+      const start = Math.PI * 0.75; // 135°
+      const end   = Math.PI * 2.25; // 405° (270° sweep)
+      const sweep = end - start;
+
+      // Colors
+      const cGood = getCSS('--good');
+      const cWarn = getCSS('--warn');
+      const cBad  = getCSS('--bad');
+      const cStroke = 'rgba(255,255,255,.10)';
+      const cTrack  = 'rgba(255,255,255,.07)';
+      const cText   = 'rgba(255,255,255,.90)';
+      const cMuted  = 'rgba(255,255,255,.60)';
+
+      // Map
+      const min = opts.min, max = opts.max;
+      const v = clamp(opts.value, min, max);
+      const t = (v - min) / (max - min || 1);
+      const ang = start + sweep * t;
+
+      // Track
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 16;
+      ctx.beginPath();
+      ctx.strokeStyle = cTrack;
+      ctx.arc(cx, cy, r, start, end);
+      ctx.stroke();
+
+      // Segments
+      function arcSeg(a0, a1, color){
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.arc(cx, cy, r, a0, a1);
+        ctx.stroke();
+      }
+
+      const segs = opts.segments || [];
+      for(const s of segs){
+        const a0 = start + sweep * ((s.from - min)/(max-min));
+        const a1 = start + sweep * ((s.to   - min)/(max-min));
+        arcSeg(a0, a1, s.color==='good'?cGood : s.color==='warn'?cWarn : cBad);
+      }
+
+      // Inner ring
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.strokeStyle = cStroke;
+      ctx.arc(cx, cy, r+14, start, end);
+      ctx.stroke();
+
+      // Needle
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(ang);
+      ctx.fillStyle = 'rgba(255,255,255,.92)';
+      ctx.shadowColor = 'rgba(0,0,0,.35)';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.moveTo(-10, 0);
+      ctx.lineTo(0, -3);
+      ctx.lineTo(r-6, 0);
+      ctx.lineTo(0, 3);
+      ctx.closePath();
+      ctx.fill();
+
+      // Hub
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(255,255,255,.18)';
+      ctx.arc(0,0, 16, 0, Math.PI*2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(255,255,255,.90)';
+      ctx.arc(0,0, 6, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+
+      // Labels
+      ctx.fillStyle = cMuted;
+      ctx.font = '12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(opts.labelTop || '', cx, cy + r + 52);
+
+      // min/max
+      ctx.fillStyle = 'rgba(255,255,255,.55)';
+      ctx.font = '11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(String(opts.minLabel ?? min), cx - r - 6, cy + r + 22);
+      ctx.textAlign = 'right';
+      ctx.fillText(String(opts.maxLabel ?? max), cx + r + 6, cy + r + 22);
+
+      // center value (small)
+      ctx.fillStyle = cText;
+      ctx.font = '700 16px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+      ctx.textAlign = 'center';
+      const valueText = Number.isFinite(opts.value) ? String(opts.valueText ?? opts.value) : '—';
+      ctx.fillText(valueText, cx, cy + 8);
+      ctx.fillStyle = cMuted;
+      ctx.font = '12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+      ctx.fillText(opts.unit || '', cx, cy + 28);
+    }
+
+    function setBadge(elBadge, elText, tone, text){
+      const pill = elBadge.querySelector('.pill');
+      const good = getCSS('--good'), warn = getCSS('--warn'), bad = getCSS('--bad'), accent = getCSS('--accent');
+
+      let color = accent;
+      if(tone==='good') color = good;
+      if(tone==='warn') color = warn;
+      if(tone==='bad')  color = bad;
+
+      pill.style.background = color;
+      pill.style.boxShadow = `0 0 0 4px ${color}22`;
+      elText.textContent = text;
+      elBadge.style.borderColor = 'rgba(255,255,255,.14)';
+      elBadge.style.background = 'rgba(255,255,255,.04)';
+      elBadge.style.color = 'rgba(255,255,255,.72)';
+    }
+
+    // ---------- Update loop ----------
+    function update(){
+      const { heightCm, heightM, weightKg, waistCm, age, sex } = readInputsAsMetric();
+
+      const bmi = calcBMI(heightM, weightKg);
+      const whtr = calcWHtR(waistCm, heightCm);
+      const pi = calcPI(heightM, weightKg);
+      const bsa = calcBSA(heightCm, weightKg);
+      const bf = calcBodyFatPct_Deurenberg(bmi, age, sex);
+
+      // ---- BMI card ----
+      const bmiR = bmiLabel(bmi);
+      document.getElementById('vBMI').textContent = Number.isFinite(bmi) ? round(bmi,1) : '—';
+      setBadge(document.getElementById('bBMI'), document.getElementById('tBMI'), bmiR.tone, bmiR.label);
+
+      drawGauge(document.getElementById('gBMI'), {
+        min: 10, max: 40,
+        value: Number.isFinite(bmi) ? bmi : 10,
+        valueText: Number.isFinite(bmi) ? round(bmi,1) : '—',
+        unit: 'kg/m²',
+        minLabel: '10', maxLabel: '40+',
+        labelTop: 'BMI range',
+        segments: [
+          {from: 10,   to: 18.5, color:'warn'},
+          {from: 18.5, to: 24.9, color:'good'},
+          {from: 25,   to: 29.9, color:'warn'},
+          {from: 30,   to: 40,   color:'bad'},
+        ]
+      });
+
+      // ---- WHtR card ----
+      const whtrR = whtrLabel(whtr);
+      document.getElementById('vWHtR').textContent = Number.isFinite(whtr) ? round(whtr,2) : '—';
+      setBadge(document.getElementById('bWHtR'), document.getElementById('tWHtR'), whtrR.tone,
+               Number.isFinite(whtr) ? whtrR.label : 'Enter waist + height');
+
+      drawGauge(document.getElementById('gWHtR'), {
+        min: 0.30, max: 0.70,
+        value: Number.isFinite(whtr) ? whtr : 0.30,
+        valueText: Number.isFinite(whtr) ? round(whtr,2) : '—',
+        unit: 'ratio',
+        minLabel: '0.30', maxLabel: '0.70',
+        labelTop: 'WHtR cutoffs',
+        segments: [
+          {from: 0.30, to: 0.40, color:'warn'},
+          {from: 0.40, to: 0.50, color:'good'},
+          {from: 0.50, to: 0.60, color:'warn'},
+          {from: 0.60, to: 0.70, color:'bad'},
+        ]
+      });
+
+      // ---- PI card ----
+      // Reasonable adult PI range (not a clinical standard)
+      const piTone = rangeTone(pi, [10.5, 13.5], [9.0, 15.0], 7.0, 18.0);
+      document.getElementById('vPI').textContent = Number.isFinite(pi) ? round(pi,1) : '—';
+      setBadge(document.getElementById('bPI'), document.getElementById('tPI'), piTone,
+               Number.isFinite(pi) ? (piTone==='good'?'Typical range':piTone==='warn'?'Outside typical':'Far outside typical') : 'Enter data');
+
+      drawGauge(document.getElementById('gPI'), {
+        min: 7, max: 18,
+        value: Number.isFinite(pi) ? pi : 7,
+        valueText: Number.isFinite(pi) ? round(pi,1) : '—',
+        unit: 'kg/m³',
+        minLabel: '7', maxLabel: '18',
+        labelTop: 'PI (adult range)',
+        segments: [
+          {from: 7,   to: 9,   color:'warn'},
+          {from: 9,   to: 10.5,color:'warn'},
+          {from: 10.5,to: 13.5,color:'good'},
+          {from: 13.5,to: 15,  color:'warn'},
+          {from: 15,  to: 18,  color:'bad'},
+        ]
+      });
+
+      // ---- BSA card ----
+      const bsaTone = rangeTone(bsa, [1.6, 2.2], [1.3, 2.6], 1.0, 3.2);
+      document.getElementById('vBSA').textContent = Number.isFinite(bsa) ? round(bsa,2) : '—';
+      setBadge(document.getElementById('bBSA'), document.getElementById('tBSA'), bsaTone,
+               Number.isFinite(bsa) ? (bsaTone==='good'?'Typical adult range':bsaTone==='warn'?'Outside typical':'Far outside typical') : 'Enter data');
+
+      drawGauge(document.getElementById('gBSA'), {
+        min: 1.0, max: 3.2,
+        value: Number.isFinite(bsa) ? bsa : 1.0,
+        valueText: Number.isFinite(bsa) ? round(bsa,2) : '—',
+        unit: 'm²',
+        minLabel: '1.0', maxLabel: '3.2',
+        labelTop: 'BSA (Mosteller)',
+        segments: [
+          {from: 1.0, to: 1.3, color:'warn'},
+          {from: 1.3, to: 1.6, color:'warn'},
+          {from: 1.6, to: 2.2, color:'good'},
+          {from: 2.2, to: 2.6, color:'warn'},
+          {from: 2.6, to: 3.2, color:'bad'},
+        ]
+      });
+
+      // ---- Body Fat % card ----
+      // Very rough ranges; shown as dial guidance only
+      const bfTone = rangeTone(bf, [10, 20], [8, 25], 3, 40);
+      document.getElementById('vBF').textContent = Number.isFinite(bf) ? round(bf,1) : '—';
+      setBadge(document.getElementById('bBF'), document.getElementById('tBF'), bfTone,
+               Number.isFinite(bf) ? (bfTone==='good'?'In dial target':bfTone==='warn'?'Borderline':'High/low') : 'Enter data');
+
+      drawGauge(document.getElementById('gBF'), {
+        min: 3, max: 40,
+        value: Number.isFinite(bf) ? bf : 3,
+        valueText: Number.isFinite(bf) ? round(bf,1) : '—',
+        unit: '%',
+        minLabel: '3', maxLabel: '40',
+        labelTop: 'Body fat % (est.)',
+        segments: [
+          {from: 3,  to: 8,  color:'warn'},
+          {from: 8,  to: 10, color:'warn'},
+          {from: 10, to: 20, color:'good'},
+          {from: 20, to: 25, color:'warn'},
+          {from: 25, to: 40, color:'bad'},
+        ]
+      });
+    }
+
+    // ---------- UI wiring ----------
+    function syncUnitUI(){
+      const u = document.getElementById('units').value;
+      const metricOn = (u === 'metric');
+
+      document.getElementById('heightMetricLabel').style.display = metricOn ? '' : 'none';
+      document.getElementById('weightMetricLabel').style.display = metricOn ? '' : 'none';
+      document.getElementById('heightImperialLabel').style.display = metricOn ? 'none' : '';
+      document.getElementById('weightImperialLabel').style.display = metricOn ? 'none' : '';
+
+      // Update waist placeholder hint
+      const waist = document.getElementById('waist');
+      waist.placeholder = metricOn ? 'cm (metric)' : 'in (imperial)';
+    }
+
+    function resetDefaults(){
+      document.getElementById('units').value = 'metric';
+      document.getElementById('heightCm').value = 175;
+      document.getElementById('weightKg').value = 72;
+      document.getElementById('heightFt').value = 5;
+      document.getElementById('heightIn').value = 9;
+      document.getElementById('weightLb').value = 159;
+      document.getElementById('waist').value = 85;
+      document.getElementById('age').value = 30;
+      document.getElementById('sex').value = 'male';
+      syncUnitUI();
+      update();
+    }
+
+    // Update on changes
+    const inputsToWatch = ['units','heightCm','weightKg','heightFt','heightIn','weightLb','waist','age','sex'];
+    for(const id of inputsToWatch){
+      document.getElementById(id).addEventListener('input', () => update());
+      document.getElementById(id).addEventListener('change', () => update());
+    }
+
+    document.getElementById('units').addEventListener('change', syncUnitUI);
+    document.getElementById('calcBtn').addEventListener('click', (e)=>{ e.preventDefault(); update(); });
+    document.getElementById('resetBtn').addEventListener('click', (e)=>{ e.preventDefault(); resetDefaults(); });
+
+    // Initial render
+    syncUnitUI();
+    update();
+  </script>
+</body>
+</html>
