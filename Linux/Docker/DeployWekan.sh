@@ -105,6 +105,8 @@ services:
       - ROOT_URL=${ROOT_URL}
       - WITH_API=true
       - WRITABLE_PATH=/data
+      - ACCOUNT_VERIFIED=true
+      - MAIL_URL=smtp://localhost:25
     depends_on:
       - wekandb
     volumes:
