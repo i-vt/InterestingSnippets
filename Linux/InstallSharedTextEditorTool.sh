@@ -15,7 +15,7 @@ echo "=============================="
 
 sudo apt update
 
-sudo apt install -y curl git
+sudo apt install -y curl git npm
 
 # Install NodeJS if not installed
 
