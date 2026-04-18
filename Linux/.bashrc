@@ -1,3 +1,9 @@
+# If not running interactively, don't do anything
+case $- in
+    *i*) ;;
+      *) return;;
+esac
+
 # ── Color helpers ──────────────────────────────────────────────────────────────
 RESET="\[\033[0m\]"
 BOLD="\[\033[1m\]"
@@ -33,13 +39,17 @@ __pc_newline() { __prompt_newline_ready=1; }
 __ps1_build() {
   local uh_user_color="$FG_USER"
   [[ $EUID -eq 0 ]] && uh_user_color="$FG_ROOT"
+  
+  # Conditionally add the newline
+  local starting_newline=""
+  [[ -n "${__prompt_newline_ready:-}" ]] && starting_newline="\n"
 
   local TAB="    "
   local path_line="${FG_ARROW}>${RESET} ${TAB}${FG_PATH}[[ ${PWD} ]]${RESET}"
   local time_part="${FG_TIME}[\\t]${RESET}"
   local who_part="${uh_user_color}\\u${RESET}${FG_HINT}@${RESET}${FG_HOST}\\h${RESET}"
-
-  PS1="\n${path_line}\n${FG_ARROW}>${RESET} ${time_part} ${who_part} : "
+  
+  PS1="${starting_newline}${path_line}\n${FG_ARROW}>${RESET} ${time_part} ${who_part} : "
 }
 
 # ── History: configuration ────────────────────────────────────────────────────
@@ -48,9 +58,6 @@ export HISTSIZE=100000          # in-memory lines
 export HISTFILESIZE=200000      # on-disk lines
 export HISTCONTROL=ignoredups:erasedups:ignorespace
 export HISTTIMEFORMAT='%F %T  ' # "YYYY-MM-DD HH:MM:SS  <cmd>"
-
-# Ignore noisy commands (turned off b/c irritates me)
-# export HISTIGNORE='ls:ls *:ll:la:cd:pwd:clear:history:exit:bg:fg:jobs'
 
 # Append to the history file and store multi-line entries
 shopt -s histappend
@@ -89,11 +96,7 @@ export VISUAL=vi
 
 
 # ── Extras from your old config ───────────────────────────────────────────────
-# If not running interactively, don't do anything
-case $- in
-    *i*) ;;
-      *) return;;
-esac
+
 
 # check the window size after each command
 shopt -s checkwinsize
@@ -116,3 +119,9 @@ if ! shopt -oq posix; then
     . /etc/bash_completion
   fi
 fi
+
+. "$HOME/.cargo/env"
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
