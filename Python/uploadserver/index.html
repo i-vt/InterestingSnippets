@@ -3,112 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enhanced File Upload</title>
+    <title>Large File Uploader</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background: #f4f4f4;
-            margin: 0;
-            padding: 20px;
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #f4f4f9;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
+            margin: 0;
         }
-
-        form {
+        .upload-container {
             background: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            width: 300px;
-        }
-
-        h2 {
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             text-align: center;
-            color: #333;
-        }
-
-        #drag-drop-area {
-            border: 2px dashed #ccc;
-            border-radius: 5px;
-            padding: 20px;
-            text-align: center;
-            cursor: pointer;
-            margin-bottom: 20px;
-        }
-
-        #drag-drop-area.hover {
-            background-color: #f9f9f9;
-        }
-
-        button {
             width: 100%;
-            padding: 10px;
-            border: none;
-            background-color: #0056b3;
+            max-width: 400px;
+        }
+        input[type="file"] {
+            margin-bottom: 20px;
+            width: 100%;
+        }
+        button {
+            background-color: #007bff;
             color: white;
-            border-radius: 5px;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
             cursor: pointer;
+            font-size: 16px;
+            width: 100%;
         }
-
         button:hover {
-            background-color: #004494;
+            background-color: #0056b3;
         }
-
-        #file-name {
-            font-size: 0.9rem;
-            color: #666;
-            text-align: center;
+        #progress-wrapper {
+            display: none; /* Hidden until upload starts */
+            margin-top: 25px;
+        }
+        progress {
+            width: 100%;
+            height: 22px;
+            border-radius: 5px;
+        }
+        #status-text {
             margin-top: 10px;
-            font-style: italic;
+            font-weight: 600;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
-    <form enctype="multipart/form-data" method="post" action="/" id="upload-form">
-        <h2>Upload Your File</h2>
-        <div id="drag-drop-area" onclick="document.getElementById('file-input').click();">
-            Drag and drop files here or <span style="color: #0056b3; text-decoration: underline;">select a file</span>
+
+    <div class="upload-container">
+        <h2>Upload a File</h2>
+        <input type="file" id="fileInput" name="file">
+        <button onclick="uploadFile()">Start Upload</button>
+
+        <div id="progress-wrapper">
+            <progress id="progressBar" value="0" max="100"></progress>
+            <div id="status-text">0%</div>
         </div>
-        <input type="file" name="file" id="file-input" style="display: none;" onchange="updateFileName()">
-        <div id="file-name">No file selected</div>
-        <button type="submit">Upload File</button>
-    </form>
+    </div>
 
     <script>
-        const dropArea = document.getElementById('drag-drop-area');
-        const fileInput = document.getElementById('file-input');
-        const fileNameDisplay = document.getElementById('file-name');
-
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropArea.addEventListener(eventName, preventDefaults, false);
-        });
-
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropArea.addEventListener(eventName, () => dropArea.classList.add('hover'), false);
-        });
-
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropArea.addEventListener(eventName, () => dropArea.classList.remove('hover'), false);
-        });
-
-        dropArea.addEventListener('drop', (e) => {
-            fileInput.files = e.dataTransfer.files;
-            updateFileName();
-        });
-
-        function updateFileName() {
-            if (fileInput.files.length > 0) {
-                fileNameDisplay.textContent = `Selected file: ${fileInput.files[0].name}`;
-            } else {
-                fileNameDisplay.textContent = 'No file selected';
+        function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert("Please select a file to upload first.");
+                return;
             }
+
+            // Package the file exactly how the Python server expects it (multipart/form-data)
+            const formData = new FormData();
+            formData.append("file", file);
+
+            const xhr = new XMLHttpRequest();
+            
+            // Get UI elements
+            const progressWrapper = document.getElementById('progress-wrapper');
+            const progressBar = document.getElementById('progressBar');
+            const statusText = document.getElementById('status-text');
+
+            // Reset and show progress bar
+            progressWrapper.style.display = 'block';
+            progressBar.value = 0;
+            statusText.innerText = '0%';
+            statusText.style.color = '#333';
+
+            // Listen to the 'progress' event to update the bar
+            xhr.upload.addEventListener("progress", function(evt) {
+                if (evt.lengthComputable) {
+                    const percentComplete = Math.round((evt.loaded / evt.total) * 100);
+                    progressBar.value = percentComplete;
+                    statusText.innerText = `Uploading... ${percentComplete}%`;
+                }
+            });
+
+            // Handle successful upload
+            xhr.addEventListener("load", function() {
+                if (xhr.status === 200) {
+                    statusText.innerText = "Upload Complete!";
+                    statusText.style.color = "green";
+                } else {
+                    statusText.innerText = "Upload Failed: " + xhr.responseText;
+                    statusText.style.color = "red";
+                }
+            });
+
+            // Handle network errors (e.g., server offline)
+            xhr.addEventListener("error", function() {
+                statusText.innerText = "Network Error: Could not connect to server.";
+                statusText.style.color = "red";
+            });
+
+            // Send the request
+            xhr.open("POST", "/", true);
+            xhr.send(formData);
         }
     </script>
 </body>
