@@ -32,11 +32,11 @@ const keyContent = `Admin Key: ${ADMIN_KEY}\nDate: ${new Date().toISOString()}`;
 try {
     const tmpPath = path.join('/tmp', 'WatchTogetherKey.txt');
     fs.writeFileSync(tmpPath, keyContent);
-    console.log(`ðŸ”‘ Admin Key saved to: ${tmpPath}`);
+    console.log(`🔑 Admin Key saved to: ${tmpPath}`);
 } catch (err) {
     const localPath = path.join(__dirname, 'WatchTogetherKey.txt');
     fs.writeFileSync(localPath, keyContent);
-    console.log(`âš ï¸  Admin Key saved to: ${localPath}`);
+    console.log(`⚠️  Admin Key saved to: ${localPath}`);
 }
 
 // === UTILS ===
@@ -206,9 +206,9 @@ return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>WatchTogether Enterprise</title>
+<title>Watch Together</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js"><\/script>
 <style>
 :root {
   --bg-dark: #0f172a;
@@ -230,6 +230,7 @@ body {
   color: var(--text-main);
   margin: 0;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -276,6 +277,14 @@ header {
 
 .header-right { display: flex; gap: 10px; align-items: center; }
 
+.love-sign {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+.love-sign .heart { color: #ef4444; font-style: normal; }
+
 button.btn-icon {
   background: transparent; border: 1px solid var(--border); color: var(--text-muted);
   width: 36px; height: 36px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;
@@ -309,10 +318,12 @@ input:focus { border-color: var(--primary); }
 .btn-secondary { background: var(--border); color: var(--text-main); }
 .btn-secondary:hover { background: #475569; }
 
-/* Range Slider */
-input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
-input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: var(--primary); cursor: pointer; margin-top: -6px; box-shadow: 0 0 0 2px var(--bg-panel); }
-input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: var(--border); border-radius: 2px; }
+/* Range Slider - Enhanced Visibility */
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; background: transparent; padding: 8px 0; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: var(--primary); cursor: pointer; margin-top: -8px; box-shadow: 0 0 0 3px var(--bg-panel), 0 0 8px rgba(59, 130, 246, 0.4); }
+input[type=range]::-moz-range-thumb { height: 20px; width: 20px; border-radius: 50%; background: var(--primary); cursor: pointer; border: 3px solid var(--bg-panel); box-shadow: 0 0 8px rgba(59, 130, 246, 0.4); }
+input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; background: var(--border); border-radius: 3px; }
+input[type=range]::-moz-range-track { width: 100%; height: 6px; background: var(--border); border-radius: 3px; }
 
 /* File Browser */
 #fileBrowser { margin-top: 15px; border: 1px solid var(--border); border-radius: 6px; max-height: 250px; overflow-y: auto; background: #0f172a; display: none; }
@@ -342,39 +353,39 @@ emoji-picker {
 }
 
 /* --- MAIN LAYOUT --- */
-.main-container { display: flex; flex: 1; overflow: hidden; position: relative; }
+.main-container { display: flex; flex: 1; overflow: hidden; position: relative; min-height: 0; }
 
 /* Video Area */
 .video-stage { 
-  flex: 1; background: black; display: flex; align-items: center; justify-content: center; position: relative; 
+  flex: 1; background: black; display: flex; align-items: center; justify-content: center; position: relative; min-height: 0;
 }
 video { width: 100%; height: 100%; max-height: calc(100vh - 60px); outline: none; }
 
 /* Sidebar */
 .sidebar { 
   width: 320px; background: var(--bg-panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; 
-  transition: width 0.3s ease; flex-shrink: 0;
+  transition: width 0.3s ease; flex-shrink: 0; min-height: 0;
 }
-.tabs { display: flex; border-bottom: 1px solid var(--border); }
+.tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .tab { flex: 1; padding: 12px; text-align: center; font-size: 13px; color: var(--text-muted); cursor: pointer; font-weight: 500; border-bottom: 2px solid transparent; }
 .tab:hover { color: var(--text-main); background: rgba(255,255,255,0.02); }
 .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
 
-.sidebar-content { flex: 1; overflow: hidden; display: flex; flex-direction: column; position: relative; }
-.tab-pane { display: none; flex: 1; flex-direction: column; overflow: hidden; height: 100%; }
+.sidebar-content { flex: 1; overflow: hidden; display: flex; flex-direction: column; position: relative; min-height: 0; }
+.tab-pane { display: none; flex: 1; flex-direction: column; overflow: hidden; height: 100%; min-height: 0; }
 .tab-pane.active { display: flex; }
 
 /* Chat */
-#chatMessages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
-.message { font-size: 13px; line-height: 1.4; padding: 8px 10px; background: rgba(255,255,255,0.03); border-radius: 6px; display: flex; gap: 10px; }
+#chatMessages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; min-height: 0; -webkit-overflow-scrolling: touch; }
+.message { font-size: 13px; line-height: 1.4; padding: 8px 10px; background: rgba(255,255,255,0.03); border-radius: 6px; display: flex; gap: 10px; flex-shrink: 0; }
 .message.system { color: var(--text-muted); font-style: italic; background: transparent; padding: 4px 0; text-align: center; font-size: 12px; display: block; }
 .msg-avatar { width: 32px; height: 32px; border-radius: 6px; background: var(--border); flex-shrink: 0; }
 .msg-content { display: flex; flex-direction: column; overflow: hidden; }
 .msg-user { color: var(--primary); font-weight: 600; font-size: 11px; margin-bottom: 2px; }
-.chat-input-area { padding: 15px; border-top: 1px solid var(--border); background: rgba(15, 23, 42, 0.5); position: relative; }
+.chat-input-area { padding: 15px; border-top: 1px solid var(--border); background: rgba(15, 23, 42, 0.5); position: relative; flex-shrink: 0; }
 
 /* Participants */
-#participantsList { padding: 15px; overflow-y: auto; }
+#participantsList { padding: 15px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .participant-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
 .avatar-img { width: 32px; height: 32px; border-radius: 6px; background: var(--border); object-fit: cover; }
 .p-name { font-size: 13px; }
@@ -386,10 +397,16 @@ video { width: 100%; height: 100%; max-height: calc(100vh - 60px); outline: none
 
 /* Mobile */
 @media (max-width: 768px) {
-  .main-container { flex-direction: column; }
-  .video-stage { min-height: 250px; flex: none; }
-  .sidebar { width: 100%; flex: 1; border-left: none; border-top: 1px solid var(--border); }
+  .main-container { flex-direction: column; overflow: hidden; }
+  .video-stage { min-height: 200px; max-height: 35vh; flex: none; }
+  video { max-height: 35vh; }
+  .sidebar { width: 100%; flex: 1; border-left: none; border-top: 1px solid var(--border); min-height: 0; overflow: hidden; }
+  .sidebar-content { flex: 1; min-height: 0; overflow: hidden; }
+  .tab-pane.active { flex: 1; min-height: 0; overflow: hidden; }
+  #chatMessages { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   #controlsPanel { grid-template-columns: 1fr; max-height: 70vh; overflow-y: auto; }
+  .love-sign { display: none; }
+  header { padding: 0 12px; }
 }
 </style>
 </head>
@@ -410,6 +427,7 @@ video { width: 100%; height: 100%; max-height: calc(100vh - 60px); outline: none
   </div>
 
   <div class="header-right">
+    <span class="love-sign">Made with love for you S <em class="heart">&hearts;</em></span>
     <button class="btn-icon" id="shareBtn" title="Copy Link">
         <svg class="icon" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
     </button>
@@ -451,7 +469,7 @@ video { width: 100%; height: 100%; max-height: calc(100vh - 60px); outline: none
     </div>
     
     <div style="margin-top:15px; border-top:1px solid var(--border); padding-top:15px;">
-      <button class="btn btn-secondary" id="browseBtn" style="width:100%">ðŸ“‚ Browse Files</button>
+      <button class="btn btn-secondary" id="browseBtn" style="width:100%">📂 Browse Files</button>
       <div id="fileBrowser"></div>
     </div>
   </div>
@@ -474,9 +492,9 @@ video { width: 100%; height: 100%; max-height: calc(100vh - 60px); outline: none
         <div class="chat-input-area">
           <emoji-picker class="dark" style="display:none; position: absolute; bottom: 100%; right: 0;"></emoji-picker>
           <div class="input-row" style="margin:0;">
-            <button class="btn btn-secondary" id="emojiBtn" style="padding: 0 10px; font-size:16px;">ðŸ˜€</button>
+            <button class="btn btn-secondary" id="emojiBtn" style="padding: 0 10px; font-size:16px;">😀</button>
             <input type="text" id="chatInput" placeholder="Say something...">
-            <button class="btn" id="sendBtn">âž¤</button>
+            <button class="btn" id="sendBtn">➤</button>
           </div>
         </div>
       </div>
@@ -488,7 +506,7 @@ video { width: 100%; height: 100%; max-height: calc(100vh - 60px); outline: none
   </aside>
 </div>
 
-<script src="/socket.io/socket.io.js"></script>
+<script src="/socket.io/socket.io.js"><\/script>
 <script>
 const socket = io();
 const urlParams = new URLSearchParams(location.search);
@@ -612,9 +630,9 @@ browseBtn.onclick = async () => {
           <div class="file-size">\${f.size}</div>
         </div>
         <div class="file-actions">
-            <button class="btn btn-xs" onclick="loadVideo('\${f.url}')" title="Load">â–¶</button>
-            <button class="btn btn-xs btn-warning" onclick="renameFile('\${f.name}')" title="Rename">âœï¸</button>
-            <button class="btn btn-xs btn-danger" onclick="deleteFile('\${f.name}')" title="Delete">ðŸ—‘ï¸</button>
+            <button class="btn btn-xs" onclick="loadVideo('\${f.url}')" title="Load">▶</button>
+            <button class="btn btn-xs btn-warning" onclick="renameFile('\${f.name}')" title="Rename">✏️</button>
+            <button class="btn btn-xs btn-danger" onclick="deleteFile('\${f.name}')" title="Delete">🗑️</button>
         </div>
       \`;
       fileBrowser.appendChild(row);
@@ -623,7 +641,7 @@ browseBtn.onclick = async () => {
   } catch(e) {
     showToast(e.message, "error");
   } finally {
-    browseBtn.textContent = "ðŸ“‚ Browse Files";
+    browseBtn.textContent = "📂 Browse Files";
   }
 };
 
@@ -733,29 +751,21 @@ document.getElementById('syncBtn').onclick = () => {
 
 // --- CORE SYNC LOGIC ---
 socket.on("video:state", (s) => {
-  // If no state, ignore. 
-  // NOTE: We REMOVED the 'isSeeking' check here. 
-  // We still want to receive Pause/Speed events even if we are scrubbing.
   if(!s) return;
   
-  // Set Ignore Flag and schedule reset
   ignore = true;
   clearTimeout(ignoreTimeout);
   
-  // 1. URL Check
   if (s.videoUrl && s.videoUrl !== player.getAttribute('src')) {
     player.src = s.videoUrl;
   }
   
-  // 2. Play/Pause Check (Always apply regardless of seeking)
   if (s.isPlaying && player.paused) {
       player.play().catch(()=>{});
   } else if (!s.isPlaying && !player.paused) {
       player.pause();
   }
   
-  // 3. Time Sync Check (Only if NOT seeking locally)
-  // This prevents the bar from jumping out from under your mouse while scrubbing
   if (!isSeeking) {
       const drift = Math.abs(player.currentTime - s.currentTime);
       if (drift > 1.0) {
@@ -764,14 +774,12 @@ socket.on("video:state", (s) => {
       }
   }
   
-  // 4. Speed Check
   if(s.playbackRate && player.playbackRate !== s.playbackRate) {
     player.playbackRate = s.playbackRate;
     document.getElementById('speedSlider').value = s.playbackRate;
     document.getElementById('speedValue').textContent = s.playbackRate + 'x';
   }
 
-  // Reset ignore after DOM updates settle
   ignoreTimeout = setTimeout(() => {
       ignore = false;
   }, 50); 
@@ -796,7 +804,6 @@ player.onseeking = () => {
 player.onseeked = () => {
     if(ignore) return;
     clearTimeout(seekTimeout);
-    // Debounce seek to prevent flooding
     seekTimeout = setTimeout(() => {
         isSeeking = false;
         socket.emit("video:seek", { room, time: player.currentTime });
@@ -817,7 +824,6 @@ function addMsg(user, text, sys) {
   if(sys) {
     d.textContent = text;
   } else {
-    // Show user avatar in message
     const avatarUrl = 'https://api.dicebear.com/9.x/dylan/svg?seed=' + user;
     d.innerHTML = \`
       <img src="\${avatarUrl}" class="msg-avatar" alt="\${user}">
@@ -866,7 +872,7 @@ socket.on("room:users", (users) => {
   });
 });
 
-</script>
+<\/script>
 </body>
 </html>`;
 }
@@ -876,10 +882,8 @@ const updateRoom = (room, data) => {
     const r = rooms.get(room);
     if(!r) return;
     
-    // Update local state
     Object.assign(r, data, { lastUpdate: Date.now() });
     
-    // BROADCAST TO EVERYONE (including sender) to ensure absolute sync
     io.to(room).emit("video:state", r);
 };
 
@@ -898,16 +902,14 @@ io.on("connection", (socket) => {
     }
     
     const r = rooms.get(room);
-    r.participants.add(username); // Add user
+    r.participants.add(username);
     
-    // Sync User
     let estimatedTime = r.currentTime;
     if(r.isPlaying) estimatedTime += (Date.now() - r.lastUpdate) / 1000 * r.playbackRate;
     
     socket.emit("video:state", { ...r, currentTime: estimatedTime });
     socket.emit("chat:history", r.chat);
     
-    // Broadcast updates
     io.to(room).emit("chat:message", { username: "System", message: `${username} joined`, isSystem: true });
     io.to(room).emit("room:users", Array.from(r.participants));
   });
@@ -957,5 +959,5 @@ io.on("connection", (socket) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`ðŸš€ Enterprise Server running at http://localhost:${PORT}`);
+  console.log(`🚀 Enterprise Server running at http://localhost:${PORT}`);
 });
