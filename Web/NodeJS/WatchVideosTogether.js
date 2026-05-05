@@ -1,5 +1,5 @@
 // npm init -y
-// npm i express socket.io multer cookie-parser uuid mime-types
+// npm i express socket.io multer cookie-parser mime-types
 // node WatchVideosTogether.js
 
 const express = require("express");
@@ -8,7 +8,7 @@ const { Server } = require("socket.io");
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
-const { v4: uuidv4 } = require("uuid");
+const { randomUUID: uuidv4 } = require("crypto");
 const mime = require("mime-types");
 const cookieParser = require("cookie-parser");
 
