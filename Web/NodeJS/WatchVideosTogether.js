@@ -40,8 +40,19 @@ try {
 }
 
 // === UTILS ===
-const ADJECTIVES = ["Happy", "Cool", "Super", "Fast", "Neon", "Cyber", "Mega", "Hyper", "Ultra", "Wild"];
-const NOUNS = ["Panda", "Fox", "Wolf", "Tiger", "Bear", "Eagle", "Falcon", "Otter", "Dragon", "Shark"];
+const ADJECTIVES = [
+  "Happy", "Cool", "Super", "Fast", "Neon", "Cyber", "Mega", "Hyper", "Ultra", "Wild",
+  "Brave", "Bright", "Silent", "Fierce", "Mighty", "Rapid", "Clever", "Bold", "Swift", "Epic",
+  "Chill", "Electric", "Shadow", "Golden", "Crimson", "Lunar", "Solar", "Cosmic", "Frozen", "Blazing",
+  "Stormy", "Lucky", "Magic", "Quantum", "Turbo", "Vivid", "Zesty", "Fearless", "Dynamic", "Radiant"
+];
+
+const NOUNS = [
+  "Panda", "Fox", "Wolf", "Tiger", "Bear", "Eagle", "Falcon", "Otter", "Dragon", "Shark",
+  "Lion", "Leopard", "Panther", "Hawk", "Raven", "Viper", "Cobra", "Dolphin", "Whale", "Octopus",
+  "Phoenix", "Griffin", "Unicorn", "Hydra", "Kraken", "Bison", "Moose", "Jaguar", "Cheetah", "Koala",
+  "Penguin", "Lynx", "Badger", "Wolverine", "Antelope", "Buffalo", "Chimera", "Mantis", "Scorpion", "Falconer"
+];
 
 function generateUsername() {
   const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)]; 
