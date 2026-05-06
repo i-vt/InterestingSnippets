@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Activity Log Browser</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #0b0d10;
+    --bg-sidebar: #0f1114;
+    --bg-main: #131619;
+    --bg-card: #181b20;
+    --bg-card-hover: #1c2027;
+    --bg-input: #1a1d22;
+    --border: rgba(255,255,255,0.06);
+    --text-primary: #e0e2e6;
+    --text-secondary: #8a8f98;
+    --text-muted: #555a63;
+    --accent: #6c8cff;
+    --accent-dim: rgba(108,140,255,0.12);
+    --green: #4ade80;
+    --green-dim: rgba(74,222,128,0.12);
+    --orange: #fb923c;
+    --orange-dim: rgba(251,146,60,0.12);
+    --pink: #f472b6;
+    --pink-dim: rgba(244,114,182,0.12);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.12);
+    --yellow: #fbbf24;
+    --yellow-dim: rgba(251,191,36,0.12);
+    --cyan: #22d3ee;
+    --cyan-dim: rgba(34,211,238,0.12);
+    --purple: #a78bfa;
+    --purple-dim: rgba(167,139,250,0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+  }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
+
+  .sidebar {
+    width: 280px;
+    min-width: 280px;
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  .sidebar-header {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-header h1 {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .sidebar-header h1::before {
+    content: '';
+    width: 10px; height: 10px;
+    background: var(--green);
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(74,222,128,0.5);
+  }
+
+  .sidebar-header .sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .progress-bar-wrap {
+    height: 3px;
+    background: var(--bg-input);
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+    display: none;
+  }
+  .progress-bar-wrap.active { display: block; }
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--green);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.3s;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stat-card {
+    background: var(--bg-card);
+    border-radius: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+  }
+
+  .stat-card .label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  .stat-card .value {
+    font-size: 18px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .stat-card .value.blue { color: var(--accent); }
+  .stat-card .value.green { color: var(--green); }
+  .stat-card .value.orange { color: var(--orange); }
+  .stat-card .value.purple { color: var(--purple); }
+
+  .filter-section {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .filter-section .filter-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .filter-toolbar {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .filter-toolbar input {
+    flex: 1;
+    min-width: 0;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 4px 8px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 11px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .filter-toolbar input:focus { border-color: var(--accent); }
+  .filter-toolbar input::placeholder { color: var(--text-muted); }
+
+  .filter-toggle-btn {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 4px 7px;
+    border-radius: 5px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    transition: all 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .filter-toggle-btn:hover { border-color: rgba(255,255,255,0.15); color: var(--text-secondary); }
+
+  .filter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  .filter-chips.scrollable {
+    max-height: 160px;
+    overflow-y: auto;
+    align-content: flex-start;
+  }
+
+  .chip {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 14px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    transition: all 0.15s;
+    white-space: nowrap;
+    font-family: inherit;
+  }
+
+  .chip:hover { border-color: rgba(255,255,255,0.15); color: var(--text-primary); }
+  .chip.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+
+  .chip .count {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    margin-left: 4px;
+    opacity: 0.7;
+  }
+
+  .info-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px 16px;
+  }
+
+  .info-list .filter-title { margin-bottom: 10px; }
+
+  .info-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.12s;
+    margin-bottom: 2px;
+  }
+
+  .info-item:hover { background: rgba(255,255,255,0.04); }
+  .info-item.active { background: var(--accent-dim); }
+  .info-item.active .name { color: var(--accent); }
+  .info-item.active .badge { color: var(--accent); }
+
+  .info-item .icon {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .info-item .details { flex: 1; min-width: 0; }
+
+  .info-item .name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .info-item .badge {
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .main-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-main);
+    height: 100vh;
+  }
+
+  .main-header {
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .mobile-toggle {
+    display: none;
+    background: none; border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+  }
+
+  .main-header .title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .search-wrap { margin-left: auto; position: relative; }
+
+  .search-wrap input {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px 6px 30px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 12px;
+    width: 220px;
+    outline: none;
+    transition: border-color 0.2s, width 0.3s;
+  }
+
+  .search-wrap input:focus { border-color: var(--accent); width: 300px; }
+  .search-wrap input::placeholder { color: var(--text-muted); }
+
+  .search-wrap svg {
+    position: absolute;
+    left: 8px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    width: 14px; height: 14px;
+  }
+
+  .view-toggle {
+    display: flex;
+    gap: 2px;
+    background: var(--bg-input);
+    border-radius: 6px;
+    padding: 2px;
+    border: 1px solid var(--border);
+  }
+
+  .view-btn {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+
+  .view-btn.active { background: var(--accent-dim); color: var(--accent); }
+  .view-btn:hover:not(.active) { color: var(--text-secondary); }
+
+  .events-container {
+    flex: 1;
+    overflow-y: auto;
+    position: relative;
+  }
+
+  .virtual-viewport {
+    position: relative;
+    width: 100%;
+  }
+
+  .date-group-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 24px 6px;
+    background: var(--bg-main);
+  }
+
+  .date-group-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .date-group-header span {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+
+  .event-row {
+    display: grid;
+    grid-template-columns: 72px 140px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 0 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.02);
+    transition: background 0.1s;
+    cursor: pointer;
+  }
+
+  .event-row:hover { background: var(--bg-card-hover); }
+  .event-row.expanded { background: var(--bg-card); }
+
+  .event-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .event-type-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .badge-session_start { background: var(--green-dim); color: var(--green); }
+  .badge-client_ad_heartbeat { background: var(--orange-dim); color: var(--orange); }
+  .badge-channel_opened { background: var(--accent-dim); color: var(--accent); }
+  .badge-default { background: var(--purple-dim); color: var(--purple); }
+
+  .event-summary {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  .event-summary strong { color: var(--text-primary); font-weight: 600; }
+
+  .event-location {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    white-space: nowrap;
+    text-align: right;
+  }
+
+  .event-detail { padding: 12px 24px 8px; }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 8px;
+  }
+
+  .detail-field {
+    background: var(--bg-deep);
+    border-radius: 6px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+  }
+
+  .detail-field .key {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 3px;
+  }
+
+  .detail-field .val {
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-primary);
+    word-break: break-all;
+    line-height: 1.4;
+  }
+
+  .table-wrap { overflow: auto; padding: 12px 24px; }
+
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+
+  .data-table th {
+    text-align: left;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg-main);
+    white-space: nowrap;
+    z-index: 2;
+  }
+
+  .data-table td {
+    padding: 7px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.025);
+    color: var(--text-secondary);
+    white-space: nowrap;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+  }
+
+  .data-table tr:hover td { background: var(--bg-card-hover); }
+  .data-table tr.vt-spacer:hover td { background: transparent; }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
+    gap: 12px;
+    padding: 40px;
+    text-align: center;
+  }
+
+  .empty-state .icon { font-size: 48px; opacity: 0.3; }
+  .empty-state p { font-size: 14px; line-height: 1.6; max-width: 400px; }
+
+  .error-banner {
+    background: var(--red-dim);
+    border: 1px solid rgba(248,113,113,0.2);
+    border-radius: 10px;
+    padding: 20px 28px;
+    margin: 24px;
+    color: var(--red);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .error-banner strong { display: block; margin-bottom: 4px; font-size: 14px; }
+  .error-banner code {
+    display: block;
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 16px;
+  }
+
+  .loading-dots { display: flex; gap: 6px; }
+
+  .loading-dots .dot {
+    width: 8px; height: 8px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: bounce 1.2s ease-in-out infinite;
+  }
+
+  .loading-dots .dot:nth-child(2) { animation-delay: 0.15s; }
+  .loading-dots .dot:nth-child(3) { animation-delay: 0.3s; }
+
+  .loading-text {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+
+  .footer-bar {
+    padding: 10px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .footer-bar .info-chip {
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--bg-input);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  @media (max-width: 720px) {
+    .sidebar { display: none; }
+    .sidebar.open {
+      display: flex;
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      z-index: 100;
+    }
+    .mobile-toggle { display: flex !important; }
+    .event-row { grid-template-columns: 60px 100px 1fr; }
+    .event-location { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h1>Activity Log</h1>
+    <div class="sub" id="sidebar-sub">Loading…</div>
+    <div class="progress-bar-wrap" id="progress-wrap">
+      <div class="progress-bar-fill" id="progress-fill"></div>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card"><div class="label">Events</div><div class="value blue" id="stat-total">—</div></div>
+    <div class="stat-card"><div class="label">Sources</div><div class="value green" id="stat-sources">—</div></div>
+    <div class="stat-card"><div class="label">Days Span</div><div class="value orange" id="stat-days">—</div></div>
+    <div class="stat-card"><div class="label">Locations</div><div class="value purple" id="stat-locations">—</div></div>
+  </div>
+
+  <div class="filter-section">
+    <div class="filter-title">Event Type</div>
+    <div class="filter-toolbar">
+      <input type="text" id="type-search" placeholder="Filter types…">
+      <button class="filter-toggle-btn" id="type-toggle" onclick="toggleAllTypes()">None</button>
+    </div>
+    <div class="filter-chips scrollable" id="type-chips"></div>
+  </div>
+
+  <div class="filter-section">
+    <div class="filter-title">Source File</div>
+    <div class="filter-chips" id="source-chips"></div>
+  </div>
+
+  <div class="info-list" id="info-list">
+    <div class="filter-title">Sessions by Device</div>
+  </div>
+</aside>
+
+<main class="main-panel">
+  <div class="main-header">
+    <button class="mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <span class="title" id="main-title">All Events</span>
+    <div class="view-toggle">
+      <button class="view-btn active" data-view="timeline" onclick="setView('timeline')">Timeline</button>
+      <button class="view-btn" data-view="table" onclick="setView('table')">Table</button>
+    </div>
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="event-search" placeholder="Search events…">
+    </div>
+  </div>
+
+  <div class="events-container" id="events-container">
+    <div class="loading-state" id="loading-state">
+      <div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+      <div class="loading-text" id="loading-text">Connecting…</div>
+    </div>
+  </div>
+
+  <div class="footer-bar">
+    <span class="info-chip" id="footer-info">Loading…</span>
+  </div>
+</main>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   PERFORMANCE-OPTIMIZED ACTIVITY LOG BROWSER
+   ─────────────────────────────────────────────────────────────
+   1. Streaming JSONL via ReadableStream — bounded memory
+   2. Slim index objects — only display/filter fields in RAM
+   3. Raw JSON lines stored separately — lazy-parsed on expand
+   4. Virtual scrolling — only visible rows in the DOM
+   5. Debounced search on slim fields — no JSON.stringify
+   6. Incremental sidebar stats while streaming
+   ═══════════════════════════════════════════════════════════════ */
+
+const FILE_MAP = {
+  'tns':       'tns/events-2026-00000-of-00001.json',
+  'reporting': 'reporting/events-2026-00000-of-00001.json',
+};
+
+// ── Compact event storage ──
+const events   = [];   // slim objects for filter + display
+const rawLines = [];   // original JSON strings for detail view
+let   filtered = [];   // indices into events[]
+
+let activeTypes   = new Set();
+let activeSources = new Set();
+let activeDevice  = null;  // null = show all, string = filter to that device label
+let currentView   = 'timeline';
+let searchQuery   = '';
+let expandedIdx   = null;
+
+// ── Incremental stats ──
+const typeCounts   = {};
+const sourceCounts = {};
+const deviceCounts = {};
+const citySet      = new Set();
+const dateSet      = new Set();
+
+// ── Helpers ──
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function dateKey(ts)  { try { return new Date(ts).toISOString().slice(0,10); } catch { return ''; } }
+function fmtDate(ts)  { try { return new Date(ts).toLocaleDateString('en-US',{weekday:'short',year:'numeric',month:'short',day:'numeric',timeZone:'UTC'}); } catch { return ts; } }
+function fmtTime(ts)  { try { return new Date(ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'UTC'}); } catch { return ''; } }
+
+function deviceLabel(e) {
+  const p = [];
+  if (e.browser) p.push(e.browser);
+  if (e.device) p.push(e.device);
+  else if (e.os) p.push(e.os + (e.osv ? ' '+e.osv : ''));
+  return p.join(' · ') || 'Unknown';
+}
+function locationLabel(e) {
+  const p = [];
+  if (e.city) p.push(e.city);
+  if (e.rc) p.push(e.rc);
+  if (e.cc) p.push(e.cc);
+  return p.join(', ') || '—';
+}
+
+function summaryHTML(e) {
+  const t = e.type || '';
+  if (t === 'session_start')
+    return '<strong>'+esc(e.browser||'?')+'</strong> on '+esc(e.os||'?')+' '+esc(e.osv||'')+' — '+esc(e.isp||'');
+  if (t === 'client_ad_heartbeat')
+    return 'State: <strong>'+esc(e.state||'')+'</strong> · RTC: '+esc(e.rtc||'')+' · uptime '+esc(String(e.uptime??'?'))+'s';
+  if (t === 'channel_opened')
+    return 'Channel <strong>'+esc(e.chId||'?')+'</strong> · type '+esc(String(e.chType??'?'))+(e.guildId?' · guild '+esc(e.guildId):'');
+  return esc((e.type||'event').slice(0,80));
+}
+
+function badgeClass(type) {
+  if (['session_start','client_ad_heartbeat','channel_opened'].includes(type))
+    return 'badge-'+type.replace(/[^a-z_]/gi,'');
+  return 'badge-default';
+}
+
+// ── Slim extraction ──
+function slimify(obj, src, rawIdx) {
+  const ts = (obj.timestamp || obj._ingest_ts || '').replace(/"/g, '');
+  return {
+    ts, type: obj.event_type||'unknown', src,
+    browser: obj.browser||'', os: obj.os||'', osv: obj.os_version||'',
+    city: obj.city||'', rc: obj.region_code||'', cc: obj.country_code||'',
+    isp: obj.isp||'', state: obj.client_app_state||'', rtc: obj.client_rtc_state||'',
+    uptime: obj.uptime_app, chId: obj.channel_id||'', chType: obj.channel_type,
+    guildId: obj.guild_id||'', device: obj.device||'', rawIdx,
+  };
+}
+
+// ═══════════════════════════════════════════════════
+//  STREAMING JSONL LOADER
+// ═══════════════════════════════════════════════════
+async function streamLoad(src, path, onBatch, onProgress) {
+  const resp = await fetch('./'+path);
+  if (!resp.ok) throw new Error('HTTP '+resp.status);
+
+  const contentLength = +resp.headers.get('Content-Length') || 0;
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+
+  let buffer = '';
+  let bytesRead = 0;
+  let batch = [];
+  const BATCH = 5000;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    bytesRead += value.byteLength;
+    buffer += decoder.decode(value, { stream: true });
+
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      try {
+        const obj = JSON.parse(trimmed);
+        const ri = rawLines.length;
+        rawLines.push(trimmed);
+        batch.push(slimify(obj, src, ri));
+      } catch {}
+    }
+
+    if (batch.length >= BATCH) {
+      onBatch(batch);
+      batch = [];
+      // Yield to browser every batch so UI stays responsive
+      await new Promise(r => setTimeout(r, 0));
+    }
+
+    if (contentLength > 0) onProgress(bytesRead / contentLength);
+  }
+
+  // Flush remaining
+  if (buffer.trim()) {
+    try {
+      const obj = JSON.parse(buffer.trim());
+      const ri = rawLines.length;
+      rawLines.push(buffer.trim());
+      batch.push(slimify(obj, src, ri));
+    } catch {}
+  }
+  if (batch.length) onBatch(batch);
+  onProgress(1);
+}
+
+// ── Incremental stats ──
+function updateStats(batch) {
+  for (const e of batch) {
+    typeCounts[e.type]  = (typeCounts[e.type]||0)  + 1;
+    sourceCounts[e.src] = (sourceCounts[e.src]||0) + 1;
+    const dl = deviceLabel(e);
+    deviceCounts[dl] = (deviceCounts[dl]||0) + 1;
+    if (e.city) citySet.add(e.city);
+    const dk = dateKey(e.ts);
+    if (dk) dateSet.add(dk);
+  }
+}
+
+function refreshStatsUI() {
+  document.getElementById('stat-total').textContent = events.length.toLocaleString();
+  document.getElementById('stat-sources').textContent = Object.keys(sourceCounts).length;
+  document.getElementById('stat-locations').textContent = citySet.size;
+  if (dateSet.size >= 2) {
+    const sorted = [...dateSet].sort();
+    const d1 = new Date(sorted[0]), d2 = new Date(sorted[sorted.length-1]);
+    document.getElementById('stat-days').textContent = Math.round((d2-d1)/864e5)+1;
+  } else {
+    document.getElementById('stat-days').textContent = dateSet.size;
+  }
+}
+
+// ── Sidebar ──
+let typeChipEls = []; // {btn, type, count} for search filtering
+
+function buildSidebar() {
+  const tc = document.getElementById('type-chips');
+  tc.innerHTML = '';
+  typeChipEls = [];
+
+  const sortedTypes = Object.entries(typeCounts).sort((a,b)=>b[1]-a[1]);
+  for (const [t, c] of sortedTypes) {
+    activeTypes.add(t);
+    const btn = document.createElement('button');
+    btn.className = 'chip active';
+    btn.innerHTML = esc(t)+' <span class="count">'+c.toLocaleString()+'</span>';
+    btn.dataset.type = t;
+    btn.onclick = () => { toggleChip(btn, activeTypes, t); updateTypeToggleLabel(); scheduleFilter(); };
+    tc.appendChild(btn);
+    typeChipEls.push({ btn, type: t, count: c });
+  }
+
+  updateTypeToggleLabel();
+
+  // Type search
+  document.getElementById('type-search').addEventListener('input', (ev) => {
+    const q = ev.target.value.toLowerCase();
+    for (const item of typeChipEls) {
+      item.btn.style.display = item.type.toLowerCase().includes(q) ? '' : 'none';
+    }
+  });
+
+  const sc = document.getElementById('source-chips');
+  sc.innerHTML = '';
+  for (const [s, c] of Object.entries(sourceCounts)) {
+    activeSources.add(s);
+    const btn = document.createElement('button');
+    btn.className = 'chip active';
+    btn.innerHTML = esc(s)+' <span class="count">'+c.toLocaleString()+'</span>';
+    btn.onclick = () => { toggleChip(btn, activeSources, s); scheduleFilter(); };
+    sc.appendChild(btn);
+  }
+
+  const il = document.getElementById('info-list');
+  il.innerHTML = '<div class="filter-title">Sessions by Device</div>';
+  const dIcon = n => /ios|iphone/i.test(n)?'📱':/android/i.test(n)?'🤖':/windows|client/i.test(n)?'🖥️':'💻';
+  for (const [dev, cnt] of Object.entries(deviceCounts).sort((a,b)=>b[1]-a[1])) {
+    const d = document.createElement('div');
+    d.className = 'info-item';
+    d.dataset.device = dev;
+    d.innerHTML =
+      '<div class="icon" style="background:var(--bg-input)">'+dIcon(dev)+'</div>'+
+      '<div class="details"><div class="name">'+esc(dev)+'</div></div>'+
+      '<div class="badge">'+cnt.toLocaleString()+'</div>';
+    d.onclick = () => {
+      if (activeDevice === dev) {
+        activeDevice = null;
+        d.classList.remove('active');
+      } else {
+        // Deactivate previous
+        const prev = il.querySelector('.info-item.active');
+        if (prev) prev.classList.remove('active');
+        activeDevice = dev;
+        d.classList.add('active');
+      }
+      scheduleFilter();
+    };
+    il.appendChild(d);
+  }
+}
+
+function toggleAllTypes() {
+  const allActive = typeChipEls.every(item => activeTypes.has(item.type));
+  if (allActive) {
+    // Unselect all
+    for (const item of typeChipEls) {
+      activeTypes.delete(item.type);
+      item.btn.classList.remove('active');
+    }
+  } else {
+    // Select all
+    for (const item of typeChipEls) {
+      activeTypes.add(item.type);
+      item.btn.classList.add('active');
+    }
+  }
+  updateTypeToggleLabel();
+  scheduleFilter();
+}
+
+function updateTypeToggleLabel() {
+  const btn = document.getElementById('type-toggle');
+  const allActive = typeChipEls.length > 0 && typeChipEls.every(item => activeTypes.has(item.type));
+  btn.textContent = allActive ? 'None' : 'All';
+}
+
+function toggleChip(btn, set, val) {
+  if (set.has(val)) { set.delete(val); btn.classList.remove('active'); }
+  else { set.add(val); btn.classList.add('active'); }
+}
+
+// ── Filtering ──
+let filterRAF = null;
+function scheduleFilter() {
+  if (filterRAF) cancelAnimationFrame(filterRAF);
+  filterRAF = requestAnimationFrame(applyFilters);
+}
+
+function applyFilters() {
+  const q = searchQuery;
+  const result = [];
+  for (let i = 0, len = events.length; i < len; i++) {
+    const e = events[i];
+    if (!activeTypes.has(e.type)) continue;
+    if (!activeSources.has(e.src)) continue;
+    if (activeDevice !== null && deviceLabel(e) !== activeDevice) continue;
+    if (q) {
+      const hay = (e.ts+e.type+e.src+e.browser+e.os+e.city+e.cc+e.isp+e.state+e.chId+e.guildId+e.device).toLowerCase();
+      if (!hay.includes(q)) continue;
+    }
+    result.push(i);
+  }
+  filtered = result;
+  expandedIdx = null;
+
+  document.getElementById('footer-info').textContent =
+    'Showing '+filtered.length.toLocaleString()+' of '+events.length.toLocaleString()+' events';
+  document.getElementById('main-title').textContent =
+    filtered.length === events.length ? 'All Events' : 'Filtered — '+filtered.length.toLocaleString()+' events';
+
+  render();
+}
+
+function setView(v) {
+  currentView = v;
+  document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+  render();
+}
+function render() {
+  if (currentView === 'timeline') renderVirtualTimeline();
+  else renderVirtualTable();
+}
+
+// ═══════════════════════════════════════════════════
+//  VIRTUAL SCROLLING — TIMELINE
+// ═══════════════════════════════════════════════════
+const ROW_H  = 38;
+const DATE_H = 34;
+const BUFFER = 20;
+
+let layoutItems = [];
+let totalHeight = 0;
+
+function buildLayout() {
+  layoutItems = [];
+  let lastDate = null;
+  for (const idx of filtered) {
+    const e = events[idx];
+    const dk = dateKey(e.ts);
+    if (dk !== lastDate) {
+      lastDate = dk;
+      layoutItems.push({ type: 'date', ts: e.ts, y: 0 });
+    }
+    layoutItems.push({ type: 'event', idx, y: 0 });
+  }
+  let y = 0;
+  for (const item of layoutItems) {
+    item.y = y;
+    y += item.type === 'date' ? DATE_H : ROW_H;
+  }
+  totalHeight = y;
+}
+
+let scrollContainer = null;
+let vpEl = null;
+let ticking = false;
+
+function renderVirtualTimeline() {
+  const c = document.getElementById('events-container');
+  if (filtered.length === 0) {
+    c.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>No events match your filters.</p></div>';
+    return;
+  }
+  buildLayout();
+  c.innerHTML = '<div class="virtual-viewport" id="vp"><div class="virtual-spacer" style="height:'+totalHeight+'px"></div></div>';
+  vpEl = document.getElementById('vp');
+  scrollContainer = c;
+  scrollContainer.onscroll = () => {
+    if (!ticking) { ticking = true; requestAnimationFrame(() => { paintVisibleRows(); ticking = false; }); }
+  };
+  paintVisibleRows();
+}
+
+function paintVisibleRows() {
+  if (!scrollContainer || !vpEl) return;
+  const scrollTop = scrollContainer.scrollTop;
+  const viewH = scrollContainer.clientHeight;
+
+  // Binary search for first visible item
+  let lo = 0, hi = layoutItems.length - 1;
+  while (lo < hi) {
+    const mid = (lo+hi)>>>1;
+    const itemBottom = layoutItems[mid].y + (layoutItems[mid].type==='date'?DATE_H:ROW_H);
+    if (itemBottom < scrollTop - BUFFER*ROW_H) lo = mid+1; else hi = mid;
+  }
+
+  const endY = scrollTop + viewH + BUFFER*ROW_H;
+  const parts = ['<div class="virtual-spacer" style="height:'+totalHeight+'px"></div>'];
+
+  for (let i = lo; i < layoutItems.length; i++) {
+    const item = layoutItems[i];
+    if (item.y > endY) break;
+
+    if (item.type === 'date') {
+      parts.push('<div class="date-group-header" style="position:absolute;top:'+item.y+'px;left:0;right:0;"><span>'+fmtDate(item.ts)+'</span></div>');
+    } else {
+      const e = events[item.idx];
+      const isExp = expandedIdx === item.idx;
+      parts.push('<div class="event-row'+(isExp?' expanded':'')+'" style="position:absolute;top:'+item.y+'px;left:0;right:0;height:'+ROW_H+'px;" data-eidx="'+item.idx+'">'+
+        '<div class="event-time">'+esc(fmtTime(e.ts))+'</div>'+
+        '<div class="event-type-badge '+badgeClass(e.type)+'">'+esc(e.type)+'</div>'+
+        '<div class="event-summary">'+summaryHTML(e)+'</div>'+
+        '<div class="event-location">'+esc(locationLabel(e))+'</div>'+
+      '</div>');
+      if (isExp) {
+        parts.push('<div class="event-detail" style="position:absolute;top:'+(item.y+ROW_H)+'px;left:0;right:0;">'+buildDetailHTML(item.idx)+'</div>');
+      }
+    }
+  }
+
+  vpEl.innerHTML = parts.join('');
+
+  vpEl.onclick = (ev) => {
+    const row = ev.target.closest('.event-row');
+    if (!row) return;
+    const eidx = +row.dataset.eidx;
+    expandedIdx = expandedIdx === eidx ? null : eidx;
+    paintVisibleRows();
+  };
+}
+
+// ── Detail (lazy parse from raw line) ──
+const HIGHLIGHT_KEYS = [
+  'event_type','event_source','user_id','browser','browser_version',
+  'device','os','os_version','city','country_code','region_code',
+  'isp','time_zone','client_version','client_build_number','release_channel',
+  'session','client_app_state','client_rtc_state','channel_id','guild_id',
+  'channel_type','uptime_app','client_performance_cpu','client_performance_memory',
+  'ip','device_vendor_id','system_locale','rendered_locale','design_id',
+  'has_client_mods','is_fast_connect','_source'
+];
+
+function buildDetailHTML(eidx) {
+  const e = events[eidx];
+  let full;
+  try { full = JSON.parse(rawLines[e.rawIdx]); } catch { full = {}; }
+  full._source = e.src;
+
+  const fields = HIGHLIGHT_KEYS.filter(k => full[k] !== undefined && full[k] !== null && full[k] !== '');
+  let html = '<div class="detail-grid">';
+  for (const k of fields) {
+    let v = full[k];
+    if (typeof v === 'object') v = JSON.stringify(v);
+    html += '<div class="detail-field"><div class="key">'+esc(k)+'</div><div class="val">'+esc(String(v))+'</div></div>';
+  }
+  const extra = Object.keys(full).filter(k => !k.startsWith('_')||k==='_source')
+    .filter(k => !HIGHLIGHT_KEYS.includes(k));
+  for (const k of extra.slice(0,20)) {
+    let v = full[k];
+    if (typeof v === 'object') v = JSON.stringify(v);
+    if (String(v).length > 200) v = String(v).slice(0,200)+'…';
+    html += '<div class="detail-field"><div class="key">'+esc(k)+'</div><div class="val">'+esc(String(v))+'</div></div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+// ═══════════════════════════════════════════════════
+//  VIRTUAL SCROLLING — TABLE VIEW
+// ═══════════════════════════════════════════════════
+const TABLE_COLS = ['timestamp','event_type','_source','browser','os','city','country_code','isp','client_app_state'];
+const TBL_ROW_H = 32;
+
+function renderVirtualTable() {
+  const c = document.getElementById('events-container');
+  if (filtered.length === 0) {
+    c.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>No events match your filters.</p></div>';
+    return;
+  }
+
+  const colCount = TABLE_COLS.length;
+
+  // Single table with sticky header — columns auto-align because
+  // header and body share the same <table>.  Virtual scrolling is
+  // achieved with spacer <tr>s above and below the visible rows.
+  let headHTML = '<tr>';
+  for (const col of TABLE_COLS) headHTML += '<th>'+esc(col)+'</th>';
+  headHTML += '</tr>';
+
+  c.innerHTML =
+    '<div class="table-wrap" id="tbl-scroll" style="height:100%;overflow:auto;padding:0 24px;">'+
+    '<table class="data-table" id="tbl-table">'+
+    '<thead>'+headHTML+'</thead>'+
+    '<tbody id="tbl-body"></tbody>'+
+    '</table></div>';
+
+  const scrollEl = document.getElementById('tbl-scroll');
+  const bodyEl   = document.getElementById('tbl-body');
+
+  let lastStartI = -1, lastEndI = -1;
+
+  function paintTable() {
+    const st = scrollEl.scrollTop;
+    const vh = scrollEl.clientHeight;
+    const startI = Math.max(0, Math.floor(st / TBL_ROW_H) - BUFFER);
+    const endI   = Math.min(filtered.length, Math.ceil((st + vh) / TBL_ROW_H) + BUFFER);
+
+    // Skip repaint if the visible window hasn't changed
+    if (startI === lastStartI && endI === lastEndI) return;
+    lastStartI = startI;
+    lastEndI   = endI;
+
+    const topH    = startI * TBL_ROW_H;
+    const bottomH = Math.max(0, (filtered.length - endI) * TBL_ROW_H);
+
+    const parts = [];
+
+    // Top spacer row
+    if (topH > 0) {
+      parts.push('<tr class="vt-spacer"><td colspan="'+colCount+'" style="height:'+topH+'px;padding:0;border:none;"></td></tr>');
+    }
+
+    // Visible data rows
+    for (let i = startI; i < endI; i++) {
+      const e = events[filtered[i]];
+      let cells = '';
+      for (const col of TABLE_COLS) {
+        let v;
+        if (col==='timestamp') v = e.ts;
+        else if (col==='_source') v = e.src;
+        else if (col==='event_type') v = e.type;
+        else if (col==='os') v = e.os+(e.osv?' '+e.osv:'');
+        else if (col==='city') v = e.city;
+        else if (col==='country_code') v = e.cc;
+        else if (col==='isp') v = e.isp;
+        else if (col==='browser') v = e.browser;
+        else if (col==='client_app_state') v = e.state;
+        else v = '';
+        cells += '<td title="'+esc(String(v))+'">'+esc(String(v))+'</td>';
+      }
+      parts.push('<tr>'+cells+'</tr>');
+    }
+
+    // Bottom spacer row
+    if (bottomH > 0) {
+      parts.push('<tr class="vt-spacer"><td colspan="'+colCount+'" style="height:'+bottomH+'px;padding:0;border:none;"></td></tr>');
+    }
+
+    bodyEl.innerHTML = parts.join('');
+  }
+
+  let tblTicking = false;
+  scrollEl.onscroll = () => {
+    if (!tblTicking) { tblTicking = true; requestAnimationFrame(() => { paintTable(); tblTicking = false; }); }
+  };
+  paintTable();
+}
+
+// ═══════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════
+async function init() {
+  const errors = [];
+  const sources = Object.entries(FILE_MAP);
+  const progressWrap = document.getElementById('progress-wrap');
+  const progressFill = document.getElementById('progress-fill');
+  const loadingText  = document.getElementById('loading-text');
+  progressWrap.classList.add('active');
+
+  // Get file sizes for overall progress
+  const sourceSizes = {};
+  const sourceProgress = {};
+  let totalBytes = 0;
+
+  for (const [src, path] of sources) {
+    try {
+      const head = await fetch('./'+path, { method: 'HEAD' });
+      const sz = +head.headers.get('Content-Length') || 0;
+      sourceSizes[src] = sz;
+      totalBytes += sz;
+    } catch { sourceSizes[src] = 0; }
+    sourceProgress[src] = 0;
+  }
+
+  function updateOverallProgress() {
+    if (totalBytes === 0) return;
+    let done = 0;
+    for (const s in sourceProgress) done += sourceProgress[s] * (sourceSizes[s]||0);
+    progressFill.style.width = Math.min(100, (done/totalBytes)*100) + '%';
+  }
+
+  for (const [src, path] of sources) {
+    loadingText.textContent = 'Streaming '+src+'…';
+    try {
+      await streamLoad(src, path,
+        (batch) => {
+          updateStats(batch);
+          events.push(...batch);
+          refreshStatsUI();
+          document.getElementById('sidebar-sub').textContent = events.length.toLocaleString()+' EVENTS LOADED';
+        },
+        (pct) => {
+          sourceProgress[src] = pct;
+          updateOverallProgress();
+          loadingText.textContent = 'Streaming '+src+'… '+Math.round(pct*100)+'%';
+        }
+      );
+    } catch (e) {
+      errors.push(path+': '+e.message);
+    }
+  }
+
+  if (events.length === 0) {
+    document.getElementById('events-container').innerHTML =
+      '<div class="error-banner"><strong>Could not load activity data</strong>'+
+      'Place this file alongside the tns/ and reporting/ directories, then serve it:'+
+      '<code>cd /path/to/Activity &amp;&amp; python3 -m http.server 8000</code>'+
+      (errors.length ? '<br>Errors: '+esc(errors.join('; ')) : '')+
+      '</div>';
+    progressWrap.classList.remove('active');
+    return;
+  }
+
+  loadingText.textContent = 'Sorting '+events.length.toLocaleString()+' events…';
+  await new Promise(r => setTimeout(r, 0));
+
+  events.sort((a, b) => (b.ts||'').localeCompare(a.ts||''));
+
+  progressWrap.classList.remove('active');
+  document.getElementById('sidebar-sub').textContent = events.length.toLocaleString()+' EVENTS LOADED';
+
+  buildSidebar();
+  applyFilters();
+
+  // Debounced search
+  let searchTimer = null;
+  document.getElementById('event-search').addEventListener('input', ev => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      searchQuery = ev.target.value.toLowerCase();
+      scheduleFilter();
+    }, 250);
+  });
+}
+
+init();
+</script>
+</body>
+</html>
