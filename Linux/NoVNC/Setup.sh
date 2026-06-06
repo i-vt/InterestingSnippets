@@ -1,47 +1,46 @@
 #!/usr/bin/env bash
 
-# Complete VNC/noVNC Installer for Clean Debian OS - FIXED VERSION
+# Complete VNC/noVNC Installer for Clean Debian OS - REBOOT-SAFE VERSION
 # This script installs and configures VNC with noVNC web interface from scratch
 # Compatible with Debian 11/12 and Ubuntu 20.04/22.04/24.04
-# Includes fixes for session crashes, connection issues, and hostname resolution
+# KEY FIXES vs previous version:
+#   - Uses Xvnc directly (no vncserver wrapper) so systemd Type=simple works correctly
+#   - Display number PINNED to :2 / port 5902 (no dynamic allocation that breaks on reboot)
+#   - ExecStartPost launches xstartup session separately so Xvnc process stays as PID 1
+#   - noVNC uses /usr/bin/websockify directly (more reliable than novnc_proxy wrapper)
+#   - Proper ExecStop uses kill on the lock file PID instead of vncserver -kill
+#   - Services use StandardOutput/StandardError for better journalctl visibility
 
 set -euo pipefail
 
-# Colors for output
+# ─── Colors ────────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Configuration (can be overridden by environment variables)
+# ─── Configuration (override via env vars) ─────────────────────────────────────
 TARGET_USER="${TARGET_USER:-vncuser}"
 VNC_PASSWORD="${VNC_PASSWORD:-}"
 WEB_PORT="${WEB_PORT:-6080}"
 VNC_GEOMETRY="${VNC_GEOMETRY:-1280x800}"
-DESKTOP_ENV="${DESKTOP_ENV:-minimal}"  # minimal, xfce4, lxde, mate
+DESKTOP_ENV="${DESKTOP_ENV:-minimal}"   # minimal | xfce4 | lxde | mate
 
-# Derived variables (will be set after user creation)
+# ─── PINNED values (stable across reboots) ────────────────────────────────────
+DISPLAY_NUM=2
+VNC_PORT=5902
+
+# ─── Derived (set after user creation) ────────────────────────────────────────
 USER_HOME=""
 
-# Function to print colored output
-print_status() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
+# ─── Helpers ───────────────────────────────────────────────────────────────────
+print_status()  { echo -e "${BLUE}[INFO]${NC} $1"; }
+print_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
+print_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
+print_error()   { echo -e "${RED}[ERROR]${NC} $1"; }
 
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-# Function to check if running as root
+# ──────────────────────────────────────────────────────────────────────────────
 check_root() {
     if [[ $EUID -ne 0 ]]; then
         print_error "This script must be run as root (use sudo)"
@@ -49,7 +48,7 @@ check_root() {
     fi
 }
 
-# Function to detect OS
+# ──────────────────────────────────────────────────────────────────────────────
 detect_os() {
     if [[ -f /etc/os-release ]]; then
         . /etc/os-release
@@ -59,21 +58,19 @@ detect_os() {
         print_error "Cannot detect OS. This script requires Debian or Ubuntu."
         exit 1
     fi
-    
     print_status "Detected OS: $OS $OS_VERSION"
-    
     if [[ "$OS" != "debian" && "$OS" != "ubuntu" ]]; then
         print_error "This script only supports Debian and Ubuntu"
         exit 1
     fi
 }
 
-# Function to ensure hostname is resolvable
+# ──────────────────────────────────────────────────────────────────────────────
 fix_hostname_resolution() {
     print_status "Checking hostname resolution..."
-    local current_hostname=$(hostname)
-    
-    if ! ping -c 1 "$current_hostname" &> /dev/null; then
+    local current_hostname
+    current_hostname=$(hostname)
+    if ! ping -c 1 "$current_hostname" &>/dev/null; then
         print_warning "Hostname '$current_hostname' not resolvable. Fixing /etc/hosts..."
         echo "127.0.0.1 $current_hostname" >> /etc/hosts
         print_success "Hostname resolution fixed."
@@ -82,65 +79,41 @@ fix_hostname_resolution() {
     fi
 }
 
-# Function to create vncuser with auto-generated password
+# ──────────────────────────────────────────────────────────────────────────────
 create_vncuser() {
     print_status "Creating vncuser account..."
-    
-    # Check if user already exists
+
     if id "$TARGET_USER" &>/dev/null; then
         print_warning "User '$TARGET_USER' already exists"
         USER_HOME="$(getent passwd "$TARGET_USER" | cut -d: -f6)"
         print_status "Using existing home directory: $USER_HOME"
     else
-        # Generate random password using uuidgen
         if ! command -v uuidgen &>/dev/null; then
-            print_status "Installing uuid-runtime for password generation..."
+            print_status "Installing uuid-runtime..."
             apt-get update -qq
             apt-get install -y uuid-runtime
         fi
-        
+
         SYSTEM_PASSWORD=$(uuidgen | head -c 8)
-        
-        # Create user with home directory
         useradd -m -s /bin/bash "$TARGET_USER"
-        
-        # Set the system password
         echo "$TARGET_USER:$SYSTEM_PASSWORD" | chpasswd
-        
         USER_HOME="$(getent passwd "$TARGET_USER" | cut -d: -f6)"
-        
-        print_success "User '$TARGET_USER' created successfully"
-        print_success "System password: $SYSTEM_PASSWORD"
+
+        print_success "User '$TARGET_USER' created"
         echo "$SYSTEM_PASSWORD" > /root/vncuser_system_password.txt
         chmod 600 /root/vncuser_system_password.txt
         print_status "System password saved to: /root/vncuser_system_password.txt"
     fi
-    
-    # Verify home directory exists
+
     if [[ ! -d "$USER_HOME" ]]; then
         print_error "Home directory '$USER_HOME' does not exist"
         exit 1
     fi
-    
-    print_status "Target user: $TARGET_USER"
-    print_status "Home directory: $USER_HOME"
+
+    print_status "Target user: $TARGET_USER  |  Home: $USER_HOME"
 }
 
-# Function to find available display
-find_available_display() {
-    for display_num in {2..99}; do
-        if ! ss -lnx 2>/dev/null | grep "/tmp/.X11-unix/X$display_num" >/dev/null; then
-            if ! [[ -f "/tmp/.X$display_num-lock" ]]; then
-                echo $display_num
-                return 0
-            fi
-        fi
-    done
-    print_error "No available display found!"
-    exit 1
-}
-
-# Function to update system
+# ──────────────────────────────────────────────────────────────────────────────
 update_system() {
     print_status "Updating system packages..."
     export DEBIAN_FRONTEND=noninteractive
@@ -149,371 +122,212 @@ update_system() {
     print_success "System updated"
 }
 
-# Function to install base packages
+# ──────────────────────────────────────────────────────────────────────────────
 install_base_packages() {
     print_status "Installing base packages..."
-    
-    local base_packages=(
-        "curl"
-        "wget"
-        "gnupg2"
-        "apt-transport-https"
-        "ca-certificates"
-        "lsb-release"
-        "systemd"
-        "dbus"
-        "dbus-x11"
-        "uuid-runtime"
-    )
-    
-    apt-get install -y "${base_packages[@]}"
+    apt-get install -y \
+        curl wget gnupg2 apt-transport-https ca-certificates \
+        lsb-release systemd dbus dbus-x11 uuid-runtime
     print_success "Base packages installed"
 }
 
-# Function to install VNC packages
+# ──────────────────────────────────────────────────────────────────────────────
 install_vnc_packages() {
     print_status "Installing VNC packages..."
-    
-    local vnc_packages=(
-        "tigervnc-standalone-server"
-        "tigervnc-common"
-        "tigervnc-tools"
-        "tigervnc-viewer"
-        "x11vnc"
-        "novnc"
-        "python3-websockify"
-        "websockify"
-    )
-    
-    apt-get install -y "${vnc_packages[@]}"
+    apt-get install -y \
+        tigervnc-standalone-server tigervnc-common \
+        tigervnc-tools tigervnc-viewer \
+        novnc python3-websockify websockify
     print_success "VNC packages installed"
 }
 
-# Function to install X11 packages
+# ──────────────────────────────────────────────────────────────────────────────
 install_x11_packages() {
     print_status "Installing X11 packages..."
-    
-    local x11_packages=(
-        "xorg"
-        "xserver-xorg-core"
-        "xfonts-base"
-        "xfonts-75dpi"
-        "xfonts-100dpi"
-        "xfonts-scalable"
-        "x11-apps"
-        "x11-utils"
-        "x11-xserver-utils"
-        "xterm"
-    )
-    
-    apt-get install -y "${x11_packages[@]}"
+    apt-get install -y \
+        xorg xserver-xorg-core \
+        xfonts-base xfonts-75dpi xfonts-100dpi xfonts-scalable \
+        x11-apps x11-utils x11-xserver-utils xterm
     print_success "X11 packages installed"
 }
 
-# Function to install desktop environment
+# ──────────────────────────────────────────────────────────────────────────────
 install_desktop_environment() {
     print_status "Installing desktop environment: $DESKTOP_ENV"
-    
     case "$DESKTOP_ENV" in
-        "xfce4")
-            apt-get install -y xfce4 xfce4-goodies xfce4-terminal
-            ;;
-        "lxde")
-            apt-get install -y lxde-core lxde-common lxterminal
-            ;;
-        "mate")
-            apt-get install -y mate-desktop-environment-core mate-terminal
-            ;;
-        "minimal")
-            apt-get install -y fluxbox openbox twm fvwm
-            ;;
+        xfce4)   apt-get install -y xfce4 xfce4-goodies xfce4-terminal ;;
+        lxde)    apt-get install -y lxde-core lxde-common lxterminal ;;
+        mate)    apt-get install -y mate-desktop-environment-core mate-terminal ;;
+        minimal) apt-get install -y fluxbox openbox twm fvwm ;;
         *)
-            print_warning "Unknown desktop environment '$DESKTOP_ENV', installing minimal setup"
+            print_warning "Unknown '$DESKTOP_ENV', falling back to minimal"
             apt-get install -y fluxbox openbox twm fvwm
             DESKTOP_ENV="minimal"
             ;;
     esac
-    
     print_success "Desktop environment installed: $DESKTOP_ENV"
 }
 
-# Function to install additional useful packages
+# ──────────────────────────────────────────────────────────────────────────────
 install_additional_packages() {
-    print_status "Installing additional useful packages..."
-    
-    local additional_packages=(
-        "firefox-esr"
-        "gedit"
-        "thunar"
-        "nano"
-        "vim"
-        "htop"
-        "net-tools"
-        "sudo"
-        "pcmanfm"
-        "mousepad"
-    )
-    
-    # Install packages that are available
-    for package in "${additional_packages[@]}"; do
-        if apt-cache show "$package" >/dev/null 2>&1; then
-            apt-get install -y "$package" || print_warning "Failed to install $package"
+    print_status "Installing additional packages..."
+    local pkgs=(firefox-esr gedit thunar nano vim htop net-tools sudo pcmanfm mousepad)
+    for pkg in "${pkgs[@]}"; do
+        if apt-cache show "$pkg" &>/dev/null; then
+            apt-get install -y "$pkg" || print_warning "Failed to install $pkg"
         else
-            print_warning "Package $package not available"
+            print_warning "Package $pkg not available, skipping"
         fi
     done
-    
     print_success "Additional packages installed"
 }
 
-# Function to fix TigerVNC migration issue
-fix_tigervnc_migration() {
-    print_status "Fixing TigerVNC migration issue..."
-    
-    # Create the new config directory structure
-    sudo -u "$TARGET_USER" mkdir -p "$USER_HOME/.config/tigervnc"
-    
-    # If old .vnc directory exists, migrate settings
-    if [[ -d "$USER_HOME/.vnc" ]]; then
-        print_status "Migrating existing VNC configuration..."
-        # Copy passwd file if it exists
-        if [[ -f "$USER_HOME/.vnc/passwd" ]]; then
-            sudo -u "$TARGET_USER" cp "$USER_HOME/.vnc/passwd" "$USER_HOME/.config/tigervnc/passwd"
-        fi
-        # Copy xstartup if it exists
-        if [[ -f "$USER_HOME/.vnc/xstartup" ]]; then
-            sudo -u "$TARGET_USER" cp "$USER_HOME/.vnc/xstartup" "$USER_HOME/.config/tigervnc/xstartup"
-        fi
-    else
-        # Create .vnc directory as well for logs
-        sudo -u "$TARGET_USER" mkdir -p "$USER_HOME/.vnc"
-    fi
-    
-    # Set proper permissions
-    chown -R "$TARGET_USER:$TARGET_USER" "$USER_HOME/.vnc" "$USER_HOME/.config/tigervnc"
-    chmod 700 "$USER_HOME/.vnc" "$USER_HOME/.config/tigervnc"
-    
-    print_success "TigerVNC configuration directories prepared"
+# ──────────────────────────────────────────────────────────────────────────────
+prepare_vnc_dirs() {
+    print_status "Preparing VNC config directories..."
+
+    sudo -u "$TARGET_USER" mkdir -p \
+        "$USER_HOME/.config/tigervnc" \
+        "$USER_HOME/.vnc"
+
+    chown -R "$TARGET_USER:$TARGET_USER" \
+        "$USER_HOME/.vnc" \
+        "$USER_HOME/.config/tigervnc"
+
+    chmod 700 \
+        "$USER_HOME/.vnc" \
+        "$USER_HOME/.config/tigervnc"
+
+    print_success "VNC directories ready"
 }
 
-# Function to setup VNC password
+# ──────────────────────────────────────────────────────────────────────────────
 setup_vnc_password() {
     print_status "Setting up VNC password..."
-    
-    # Ensure directories exist with proper permissions
-    fix_tigervnc_migration
-    
+    prepare_vnc_dirs
+
     if [[ -z "$VNC_PASSWORD" ]]; then
-        # Auto-generate VNC password using uuidgen
         VNC_PASSWORD=$(uuidgen | head -c 8)
         print_status "Auto-generated VNC password: $VNC_PASSWORD"
         echo "$VNC_PASSWORD" > /root/vncuser_vnc_password.txt
         chmod 600 /root/vncuser_vnc_password.txt
         print_status "VNC password saved to: /root/vncuser_vnc_password.txt"
     fi
-    
-    # Non-interactive password setup - write to both locations
-    print_status "Setting VNC password non-interactively"
-    local password_hash
-    password_hash=$(sudo -u "$TARGET_USER" bash -c "printf '%s\n' '$VNC_PASSWORD' | vncpasswd -f")
-    
-    # Save to new location
-    printf '%s' "$password_hash" > "$USER_HOME/.config/tigervnc/passwd"
-    chmod 600 "$USER_HOME/.config/tigervnc/passwd"
-    chown "$TARGET_USER:$TARGET_USER" "$USER_HOME/.config/tigervnc/passwd"
-    
-    # Also save to old location for compatibility
-    printf '%s' "$password_hash" > "$USER_HOME/.vnc/passwd"
-    chmod 600 "$USER_HOME/.vnc/passwd"
-    chown "$TARGET_USER:$TARGET_USER" "$USER_HOME/.vnc/passwd"
-    
+
+    local passwd_hash
+    passwd_hash=$(printf '%s\n' "$VNC_PASSWORD" | vncpasswd -f)
+
+    # Write to both locations
+    for dest in \
+        "$USER_HOME/.config/tigervnc/passwd" \
+        "$USER_HOME/.vnc/passwd"
+    do
+        printf '%s' "$passwd_hash" > "$dest"
+        chmod 600 "$dest"
+        chown "$TARGET_USER:$TARGET_USER" "$dest"
+    done
+
     print_success "VNC password configured"
 }
 
-# Function to create bulletproof xstartup script
+# ──────────────────────────────────────────────────────────────────────────────
 create_xstartup_script() {
-    print_status "Creating bulletproof xstartup script..."
-    
-    # Create in new location
-    local xstartup_file="$USER_HOME/.config/tigervnc/xstartup"
-    
-    cat > "$xstartup_file" <<'EOF'
+    print_status "Creating xstartup script..."
+
+    local xstartup="$USER_HOME/.config/tigervnc/xstartup"
+
+    cat > "$xstartup" <<'XSTARTUP_EOF'
 #!/bin/bash
+# VNC xstartup — launched by ExecStartPost in vnc-backend.service
 
-# Bulletproof VNC xstartup script with comprehensive error handling
 LOG_FILE="$HOME/.vnc/startup.log"
+exec > >(while IFS= read -r line; do
+    echo "$(date '+%Y-%m-%d %H:%M:%S'): $line"
+done >> "$LOG_FILE") 2>&1
 
-# Redirect all output to log file with timestamps
-exec > >(while IFS= read -r line; do echo "$(date '+%Y-%m-%d %H:%M:%S'): $line"; done >> "$LOG_FILE") 2>&1
+echo "=== xstartup BEGIN ==="
+echo "USER=$USER  HOME=$HOME  DISPLAY=$DISPLAY"
 
-echo "=== VNC Startup Started ==="
-echo "USER: $USER"
-echo "HOME: $HOME"
-echo "DISPLAY: $DISPLAY"
-echo "PATH: $PATH"
-echo "PWD: $(pwd)"
+# ── Sanitise environment ──────────────────────────────────────────────────────
+unset SESSION_MANAGER DBUS_SESSION_BUS_ADDRESS \
+      XDG_SESSION_PATH XDG_SESSION_ID XDG_SESSION_COOKIE
 
-# Clean problematic environment variables
-unset SESSION_MANAGER
-unset DBUS_SESSION_BUS_ADDRESS
-unset XDG_SESSION_PATH
-unset XDG_SESSION_ID
-unset XDG_SESSION_COOKIE
-
-# Set essential environment variables
 export USER="${USER:-$(whoami)}"
-export HOME="${HOME:-$(getent passwd $USER | cut -d: -f6)}"
+export HOME="${HOME:-$(getent passwd "$USER" | cut -d: -f6)}"
 export SHELL="${SHELL:-/bin/bash}"
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG="${LANG:-en_US.UTF-8}"
 export LC_ALL="${LC_ALL:-en_US.UTF-8}"
 
-echo "Environment cleaned and configured"
+# ── .Xauthority ───────────────────────────────────────────────────────────────
+[[ -f "$HOME/.Xauthority" ]] || { touch "$HOME/.Xauthority"; chmod 600 "$HOME/.Xauthority"; }
 
-# Create .Xauthority if it doesn't exist
-if [ ! -f "$HOME/.Xauthority" ]; then
-    touch "$HOME/.Xauthority"
-    chmod 600 "$HOME/.Xauthority"
-    echo "Created .Xauthority file"
+# ── D-Bus ─────────────────────────────────────────────────────────────────────
+if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]] && command -v dbus-launch &>/dev/null; then
+    eval "$(dbus-launch --sh-syntax)"
+    export DBUS_SESSION_BUS_ADDRESS
+    echo "D-Bus started: $DBUS_SESSION_BUS_ADDRESS"
 fi
 
-# Start D-Bus session if needed
-echo "Setting up D-Bus session..."
-if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
-    if command -v dbus-launch >/dev/null 2>&1; then
-        eval $(dbus-launch --sh-syntax)
-        export DBUS_SESSION_BUS_ADDRESS
-        echo "D-Bus session started: $DBUS_SESSION_BUS_ADDRESS"
-    else
-        echo "D-Bus not available, skipping"
-    fi
-fi
+# ── Basic X11 ─────────────────────────────────────────────────────────────────
+xrdb "$HOME/.Xresources" 2>/dev/null || true
+xsetroot -solid "#2E3440" 2>/dev/null || true
 
-# Set up basic X11 environment
-echo "Setting up X11 environment..."
-xrdb "$HOME/.Xresources" 2>/dev/null || echo "No .Xresources file found"
-xsetroot -solid "#2E3440" 2>/dev/null || echo "Failed to set background color"
-
-# Function to start a window manager and keep it running
-start_window_manager() {
-    local wm_command="$1"
-    local wm_name="$2"
-    
-    echo "Attempting to start $wm_name..."
-    
-    if command -v "$wm_command" >/dev/null 2>&1; then
-        echo "Starting $wm_name window manager..."
-        "$wm_command" &
+# ── Window manager launcher ───────────────────────────────────────────────────
+start_wm() {
+    local cmd="$1" name="$2"
+    if command -v "$cmd" &>/dev/null; then
+        echo "Starting $name..."
+        "$cmd" &
         WM_PID=$!
-        
-        # Give it time to start
         sleep 2
-        
-        # Check if it's still running
         if kill -0 "$WM_PID" 2>/dev/null; then
-            echo "$wm_name started successfully with PID: $WM_PID"
+            echo "$name running (PID $WM_PID)"
             return 0
-        else
-            echo "$wm_name failed to start or crashed immediately"
-            return 1
         fi
+        echo "$name exited immediately"
     else
-        echo "$wm_name command not found"
-        return 1
+        echo "$name not found"
     fi
+    return 1
 }
 
-# Function to start applications
-start_applications() {
-    echo "Starting applications..."
-    
-    # Start terminal
-    if command -v xterm >/dev/null 2>&1; then
-        xterm -geometry 80x30+50+50 -title "VNC Terminal" -e bash &
-        echo "Started xterm terminal"
-    elif command -v xfce4-terminal >/dev/null 2>&1; then
-        xfce4-terminal --geometry 80x30 --title "VNC Terminal" &
-        echo "Started xfce4-terminal"
-    fi
-    
-    # Start file manager
-    if command -v thunar >/dev/null 2>&1; then
-        thunar &
-        echo "Started Thunar file manager"
-    elif command -v pcmanfm >/dev/null 2>&1; then
-        pcmanfm &
-        echo "Started PCManFM file manager"
-    fi
-    
-    # Start text editor
-    if command -v mousepad >/dev/null 2>&1; then
-        mousepad &
-        echo "Started Mousepad text editor"
-    elif command -v gedit >/dev/null 2>&1; then
-        gedit &
-        echo "Started gedit text editor"
-    fi
-}
-
-# Try to start desktop environment in order of preference
-echo "Starting desktop environment..."
-
+# ── Start desktop / WM ───────────────────────────────────────────────────────
 WM_PID=""
 
-# Try different desktop environments/window managers
-if [[ "$DESKTOP_ENV" == "xfce4" ]] && command -v startxfce4 >/dev/null 2>&1; then
-    echo "Attempting to start XFCE4 desktop..."
-    # Try XFCE but with fallback
+if [[ "${DESKTOP_ENV:-minimal}" == "xfce4" ]] && command -v startxfce4 &>/dev/null; then
     startxfce4 &
-    XFCE_PID=$!
+    WM_PID=$!
     sleep 5
-    
-    if kill -0 "$XFCE_PID" 2>/dev/null; then
-        echo "XFCE4 started successfully"
-        WM_PID=$XFCE_PID
-    else
-        echo "XFCE4 failed, falling back to window manager"
-    fi
+    kill -0 "$WM_PID" 2>/dev/null || { echo "XFCE4 crashed, falling back"; WM_PID=""; }
 fi
 
-# If XFCE failed or we're using minimal, try window managers
-if [[ -z "$WM_PID" ]] || ! kill -0 "$WM_PID" 2>/dev/null; then
-    echo "Starting window manager fallback sequence..."
-    
-    # Try different window managers in order of preference
-    if start_window_manager "openbox" "Openbox"; then
-        WM_PID=$WM_PID
-    elif start_window_manager "fluxbox" "Fluxbox"; then
-        WM_PID=$WM_PID
-    elif start_window_manager "fvwm" "FVWM"; then
-        WM_PID=$WM_PID
-    elif start_window_manager "twm" "TWM"; then
-        WM_PID=$WM_PID
-    else
-        echo "ERROR: No window manager could be started!"
-        echo "Available window managers:"
-        command -v openbox && echo "  - openbox: available"
-        command -v fluxbox && echo "  - fluxbox: available"
-        command -v fvwm && echo "  - fvwm: available"
-        command -v twm && echo "  - twm: available"
+if [[ -z "$WM_PID" ]]; then
+    start_wm openbox Openbox  ||
+    start_wm fluxbox Fluxbox  ||
+    start_wm fvwm    FVWM     ||
+    start_wm twm     TWM      || {
+        echo "FATAL: no window manager available"
         exit 1
-    fi
+    }
 fi
 
-# Start applications after window manager is running
 sleep 2
-start_applications
 
-echo "Desktop startup complete at $(date)"
-echo "Window manager PID: $WM_PID"
+# ── Applications ─────────────────────────────────────────────────────────────
+command -v xterm         &>/dev/null && xterm -geometry 80x30+50+50 &
+command -v thunar        &>/dev/null && thunar   &  || \
+command -v pcmanfm       &>/dev/null && pcmanfm  &  || true
+command -v mousepad      &>/dev/null && mousepad &  || \
+command -v gedit         &>/dev/null && gedit    &  || true
 
-# Create a simple right-click menu for some window managers
-if command -v openbox >/dev/null 2>&1 && pgrep openbox >/dev/null; then
+# ── Openbox right-click menu ──────────────────────────────────────────────────
+if command -v openbox &>/dev/null && pgrep -x openbox &>/dev/null; then
     mkdir -p "$HOME/.config/openbox"
     cat > "$HOME/.config/openbox/menu.xml" <<'MENU_EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <openbox_menu xmlns="http://openbox.org/">
-  <menu id="root-menu" label="Openbox 3">
+  <menu id="root-menu" label="Menu">
     <item label="Terminal">
       <action name="Execute"><command>xterm</command></action>
     </item>
@@ -533,469 +347,370 @@ if command -v openbox >/dev/null 2>&1 && pgrep openbox >/dev/null; then
   </menu>
 </openbox_menu>
 MENU_EOF
-    echo "Created Openbox menu"
 fi
 
-# Monitor the session and keep it alive
-echo "Monitoring desktop session..."
+echo "Desktop startup complete at $(date)"
 
-# Function to monitor and restart if needed
-monitor_session() {
-    local check_interval=10
-    local restart_attempts=0
-    local max_restarts=3
-    
-    while true; do
-        sleep $check_interval
-        
-        if [[ -n "$WM_PID" ]] && kill -0 "$WM_PID" 2>/dev/null; then
-            # Window manager is still running
-            continue
-        else
-            echo "Window manager stopped at $(date)"
-            
-            if [[ $restart_attempts -lt $max_restarts ]]; then
-                echo "Attempting to restart window manager (attempt $((restart_attempts + 1)))"
-                
-                if start_window_manager "openbox" "Openbox" || \
-                   start_window_manager "fluxbox" "Fluxbox" || \
-                   start_window_manager "twm" "TWM"; then
-                    echo "Window manager restarted successfully"
-                    restart_attempts=0
-                else
-                    restart_attempts=$((restart_attempts + 1))
-                    echo "Failed to restart window manager"
-                fi
-            else
-                echo "Maximum restart attempts reached, exiting"
-                break
-            fi
-        fi
-    done
-}
+# ── Keep-alive: restart WM if it dies (up to 5 times) ────────────────────────
+restart_count=0
+while true; do
+    sleep 10
+    if [[ -n "$WM_PID" ]] && kill -0 "$WM_PID" 2>/dev/null; then
+        continue
+    fi
+    echo "WM died at $(date), restart #$((restart_count+1))"
+    (( restart_count++ )) || true
+    [[ $restart_count -gt 5 ]] && { echo "Too many restarts, giving up"; break; }
 
-# Start monitoring in background and wait for the main process
-monitor_session &
-MONITOR_PID=$!
+    start_wm openbox Openbox ||
+    start_wm fluxbox Fluxbox ||
+    start_wm twm     TWM     || true
+done
 
-# Wait for the window manager to exit
-if [[ -n "$WM_PID" ]]; then
-    wait "$WM_PID"
-fi
+echo "xstartup exiting at $(date)"
+XSTARTUP_EOF
 
-# Clean up
-kill "$MONITOR_PID" 2>/dev/null || true
+    chmod +x "$xstartup"
+    chown "$TARGET_USER:$TARGET_USER" "$xstartup"
 
-echo "VNC session ended at $(date)"
-EOF
-    
-    chown "$TARGET_USER:$TARGET_USER" "$xstartup_file"
-    chmod +x "$xstartup_file"
-    
-    # Also create in old location for compatibility
-    cp "$xstartup_file" "$USER_HOME/.vnc/xstartup"
-    chown "$TARGET_USER:$TARGET_USER" "$USER_HOME/.vnc/xstartup"
+    # Mirror to legacy location
+    cp "$xstartup" "$USER_HOME/.vnc/xstartup"
     chmod +x "$USER_HOME/.vnc/xstartup"
-    
-    print_success "Bulletproof xstartup script created"
+    chown "$TARGET_USER:$TARGET_USER" "$USER_HOME/.vnc/xstartup"
+
+    print_success "xstartup script created"
 }
 
-# Function to find available display and set ports
-setup_display_and_ports() {
-    print_status "Finding available display..."
-    
-    # Clean up any existing VNC sessions first
-    sudo -u "$TARGET_USER" bash -c "vncserver -list" 2>/dev/null || true
-    for old_display in {1..10}; do
-        sudo -u "$TARGET_USER" bash -c "vncserver -kill :$old_display" 2>/dev/null || true
-    done
-    
-    # Clean up lock files
-    rm -f /tmp/.X*-lock /tmp/.X11-unix/X* 2>/dev/null || true
-    
-    # Find available display
-    DISPLAY_NUM=$(find_available_display)
-    VNC_PORT=$((5900 + DISPLAY_NUM))
-    
-    print_success "Using Display :$DISPLAY_NUM (Port $VNC_PORT)"
-    
-    # Export for use in systemd services
-    export DISPLAY_NUM VNC_PORT
-}
-
-# Function to test VNC manually
-test_vnc_manual() {
-    print_status "Testing VNC startup manually..."
-    
-    # Clean up any existing locks or sessions
-    rm -f "/tmp/.X$DISPLAY_NUM-lock" "/tmp/.X11-unix/X$DISPLAY_NUM" 2>/dev/null || true
-    
-    # Switch to user and start VNC
-    if sudo -u "$TARGET_USER" bash -c "cd '$USER_HOME' && vncserver :$DISPLAY_NUM -geometry $VNC_GEOMETRY -localhost yes -SecurityTypes VncAuth -verbose"; then
-        print_success "VNC started successfully on display :$DISPLAY_NUM"
-        
-        # Wait and check if listening
-        sleep 5
-        if ss -tlnp | grep ":$VNC_PORT" >/dev/null; then
-            print_success "VNC is listening on port $VNC_PORT"
-            
-            # Check if the process is still running
-            if pgrep -f "Xtigervnc.*:$DISPLAY_NUM" >/dev/null; then
-                print_success "VNC process is stable and running"
-                
-                # Show some log information
-                echo "=== VNC Startup Log ==="
-                tail -10 "$USER_HOME/.vnc/startup.log" 2>/dev/null || echo "No startup log yet"
-                
-                # Kill the test instance
-                sudo -u "$TARGET_USER" vncserver -kill ":$DISPLAY_NUM"
-                sleep 2
-                return 0
-            else
-                print_error "VNC process died after starting"
-                return 1
-            fi
-        else
-            print_error "VNC started but not listening on port $VNC_PORT"
-            return 1
-        fi
+# ──────────────────────────────────────────────────────────────────────────────
+# Resolve the websockify binary once so the service file has a concrete path.
+find_websockify() {
+    if command -v websockify &>/dev/null; then
+        echo "$(command -v websockify)"
+    elif [[ -x /usr/bin/websockify ]]; then
+        echo "/usr/bin/websockify"
+    elif [[ -x /usr/share/novnc/utils/novnc_proxy ]]; then
+        echo "/usr/share/novnc/utils/novnc_proxy"
     else
-        print_error "VNC failed to start on display :$DISPLAY_NUM"
-        if [[ -f "$USER_HOME/.vnc/$(hostname):$DISPLAY_NUM.log" ]]; then
-            print_error "VNC log contents:"
-            cat "$USER_HOME/.vnc/$(hostname):$DISPLAY_NUM.log"
-        fi
-        return 1
+        print_error "Cannot find websockify or novnc_proxy"
+        exit 1
     fi
 }
 
-# Function to create robust systemd services
+# ──────────────────────────────────────────────────────────────────────────────
 create_systemd_services() {
-    print_status "Creating robust systemd services..."
-    
-    # VNC Backend Service - Using Type=simple instead of forking for better reliability
+    print_status "Writing systemd service files..."
+
+    local passwd_file="$USER_HOME/.config/tigervnc/passwd"
+    local websockify_bin
+    websockify_bin=$(find_websockify)
+
+    # ── vnc-backend.service ───────────────────────────────────────────────────
+    #
+    # KEY DESIGN:
+    #  • ExecStart runs Xvnc directly — no wrapper script, no forking.
+    #    systemd Type=simple tracks this PID reliably across reboots.
+    #  • ExecStartPost launches xstartup AS THE USER after Xvnc is up.
+    #    The desktop session is a child of the service but not the tracked PID.
+    #  • ExecStop kills by the lock-file PID, which is always the Xvnc process.
+    #  • Display number is PINNED to :${DISPLAY_NUM} so the port never shifts.
+    # ─────────────────────────────────────────────────────────────────────────
     cat > /etc/systemd/system/vnc-backend.service <<EOF
 [Unit]
-Description=TigerVNC virtual desktop on :$DISPLAY_NUM (localhost only)
+Description=TigerVNC Xvnc server on display :${DISPLAY_NUM}
 After=multi-user.target network.target
 Wants=network.target
 
 [Service]
 Type=simple
-User=$TARGET_USER
-Group=$TARGET_USER
-WorkingDirectory=$USER_HOME
-Environment=HOME=$USER_HOME
-Environment=USER=$TARGET_USER
-Environment=DISPLAY=:$DISPLAY_NUM
+User=${TARGET_USER}
+Group=${TARGET_USER}
+WorkingDirectory=${USER_HOME}
 
-# Cleanup before starting
-ExecStartPre=/bin/bash -c 'vncserver -kill :$DISPLAY_NUM >/dev/null 2>&1 || true'
-ExecStartPre=/bin/bash -c 'rm -f /tmp/.X$DISPLAY_NUM-lock /tmp/.X11-unix/X$DISPLAY_NUM $USER_HOME/.vnc/*.pid || true'
-ExecStartPre=/bin/sleep 2
+Environment=HOME=${USER_HOME}
+Environment=USER=${TARGET_USER}
+Environment=DISPLAY=:${DISPLAY_NUM}
+Environment=DESKTOP_ENV=${DESKTOP_ENV}
 
-# Start VNC server with wrapper script
-ExecStart=/bin/bash -c 'cd $USER_HOME && exec vncserver :$DISPLAY_NUM -geometry $VNC_GEOMETRY -localhost yes -SecurityTypes VncAuth -fg'
+# ── Cleanup stale locks before starting ──────────────────────────────────────
+ExecStartPre=/bin/bash -c 'rm -f /tmp/.X${DISPLAY_NUM}-lock /tmp/.X11-unix/X${DISPLAY_NUM}'
+ExecStartPre=/bin/sleep 1
 
-# Stop command
-ExecStop=/bin/bash -c 'vncserver -kill :$DISPLAY_NUM || true'
+# ── Start Xvnc directly (stays in foreground — systemd tracks this PID) ───────
+ExecStart=/usr/bin/Xvnc \
+    :${DISPLAY_NUM} \
+    -geometry ${VNC_GEOMETRY} \
+    -depth 24 \
+    -localhost yes \
+    -SecurityTypes VncAuth \
+    -PasswordFile ${passwd_file} \
+    -rfbport ${VNC_PORT} \
+    -fp /usr/share/fonts/X11/misc/,/usr/share/fonts/X11/Type1/
 
-# Restart policy
+# ── Launch desktop session after Xvnc is ready ───────────────────────────────
+ExecStartPost=/bin/bash -c '\
+    sleep 3 && \
+    DISPLAY=:${DISPLAY_NUM} \
+    HOME=${USER_HOME} \
+    USER=${TARGET_USER} \
+    DESKTOP_ENV=${DESKTOP_ENV} \
+    sudo -u ${TARGET_USER} \
+        /bin/bash ${USER_HOME}/.config/tigervnc/xstartup &'
+
+# ── Stop: kill by lock-file PID ───────────────────────────────────────────────
+ExecStop=/bin/bash -c '\
+    if [[ -f /tmp/.X${DISPLAY_NUM}-lock ]]; then \
+        kill \$(cat /tmp/.X${DISPLAY_NUM}-lock) 2>/dev/null || true; \
+    fi; \
+    rm -f /tmp/.X${DISPLAY_NUM}-lock /tmp/.X11-unix/X${DISPLAY_NUM}'
+
 Restart=always
 RestartSec=10
 StartLimitBurst=5
 StartLimitIntervalSec=60
-
-# Timeouts
 TimeoutStartSec=60
-TimeoutStopSec=15
+TimeoutStopSec=20
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=vnc-backend
 
 [Install]
 WantedBy=multi-user.target
 EOF
-    
-    # noVNC Proxy Service - Enhanced with better error handling
+
+    # ── novnc-proxy.service ───────────────────────────────────────────────────
+    #
+    # KEY DESIGN:
+    #  • Uses /usr/bin/websockify directly — the novnc_proxy shell wrapper has
+    #    extra process layers that confuse systemd restart tracking.
+    #  • ExecStartPre polls until port ${VNC_PORT} is open (max 30 s).
+    #  • --heartbeat keeps idle WebSocket connections alive through NAT.
+    # ─────────────────────────────────────────────────────────────────────────
     cat > /etc/systemd/system/novnc-proxy.service <<EOF
 [Unit]
-Description=noVNC WebSocket proxy on :$WEB_PORT -> localhost:$VNC_PORT
+Description=noVNC WebSocket proxy  0.0.0.0:${WEB_PORT} -> 127.0.0.1:${VNC_PORT}
 After=network-online.target vnc-backend.service
 Wants=network-online.target
 Requires=vnc-backend.service
 
 [Service]
 Type=simple
-User=$TARGET_USER
-Environment=HOME=$USER_HOME
+User=${TARGET_USER}
+Environment=HOME=${USER_HOME}
 
-# Wait for VNC to be ready
-ExecStartPre=/bin/bash -c 'for i in {1..30}; do ss -tlnp | grep :$VNC_PORT && break; sleep 1; done'
+# Wait up to 30 s for Xvnc to open its port
+ExecStartPre=/bin/bash -c '\
+    for i in \$(seq 1 30); do \
+        ss -tlnp | grep -q :${VNC_PORT} && exit 0; \
+        sleep 1; \
+    done; \
+    echo "Timed out waiting for VNC port ${VNC_PORT}"; exit 1'
 
-# Start noVNC proxy with web directory
-ExecStart=/usr/share/novnc/utils/novnc_proxy --listen 0.0.0.0:$WEB_PORT --vnc 127.0.0.1:$VNC_PORT --web /usr/share/novnc
+ExecStart=${websockify_bin} \
+    --web /usr/share/novnc \
+    --heartbeat 30 \
+    0.0.0.0:${WEB_PORT} \
+    127.0.0.1:${VNC_PORT}
 
-# Restart policy
 Restart=always
 RestartSec=5
 StartLimitBurst=5
 StartLimitIntervalSec=60
-
-# Timeouts
-TimeoutStartSec=30
+TimeoutStartSec=40
 TimeoutStopSec=10
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=novnc-proxy
 
 [Install]
 WantedBy=multi-user.target
 EOF
-    
-    print_success "Robust systemd services created"
+
+    print_success "Systemd service files written"
+    print_status "  VNC  service : /etc/systemd/system/vnc-backend.service"
+    print_status "  noVNC service: /etc/systemd/system/novnc-proxy.service"
+    print_status "  Xvnc binary  : /usr/bin/Xvnc"
+    print_status "  websockify   : ${websockify_bin}"
 }
 
-# Function to configure firewall
+# ──────────────────────────────────────────────────────────────────────────────
 configure_firewall() {
     print_status "Configuring firewall..."
-    
-    if command -v ufw >/dev/null 2>&1; then
-        if ufw status | grep -q "Status: active"; then
-            ufw allow "$WEB_PORT"/tcp || true
-            print_success "UFW firewall configured for port $WEB_PORT"
-        else
-            print_warning "UFW firewall is not active"
-        fi
+    if command -v ufw &>/dev/null && ufw status | grep -q "Status: active"; then
+        ufw allow "$WEB_PORT"/tcp || true
+        print_success "UFW opened port $WEB_PORT"
     else
-        print_warning "UFW firewall not installed"
+        print_warning "UFW not active — skipping firewall config"
     fi
 }
 
-# Function to start services with proper sequencing
+# ──────────────────────────────────────────────────────────────────────────────
 start_services() {
-    print_status "Starting and enabling services with proper sequencing..."
-    
+    print_status "Reloading systemd and starting services..."
     systemctl daemon-reload
-    
-    # Enable services
+
     systemctl enable vnc-backend.service
     systemctl enable novnc-proxy.service
-    
-    # Start VNC backend first
-    print_status "Starting VNC backend service..."
-    if systemctl start vnc-backend.service; then
-        print_success "VNC backend service started"
-        
-        # Wait for VNC to be fully ready
-        print_status "Waiting for VNC to be ready..."
-        local attempts=0
-        while [[ $attempts -lt 30 ]]; do
-            if ss -tlnp | grep ":$VNC_PORT" >/dev/null && systemctl is-active --quiet vnc-backend.service; then
-                print_success "VNC backend is ready and listening on port $VNC_PORT"
-                break
-            fi
-            sleep 2
-            attempts=$((attempts + 1))
-        done
-        
-        if [[ $attempts -eq 30 ]]; then
-            print_error "VNC backend failed to become ready within timeout"
-            systemctl status vnc-backend.service --no-pager -l
-            return 1
-        fi
-        
-        # Now start noVNC proxy
-        print_status "Starting noVNC proxy service..."
-        if systemctl start novnc-proxy.service; then
-            print_success "noVNC proxy service started"
-            
-            # Wait for noVNC to be ready
-            sleep 5
-            if systemctl is-active --quiet novnc-proxy.service; then
-                print_success "noVNC proxy is running"
-                
-                # Test web interface
-                if curl -s --max-time 5 "http://localhost:$WEB_PORT/" >/dev/null; then
-                    print_success "noVNC web interface is responding"
-                else
-                    print_warning "noVNC web interface may not be fully ready yet"
-                fi
-            else
-                print_error "noVNC proxy service is not active"
-                systemctl status novnc-proxy.service --no-pager -l
-                return 1
-            fi
-        else
-            print_error "noVNC proxy service failed to start"
-            systemctl status novnc-proxy.service --no-pager -l
-            return 1
-        fi
-    else
-        print_error "VNC backend service failed to start"
-        systemctl status vnc-backend.service --no-pager -l
+
+    # ── Start VNC ─────────────────────────────────────────────────────────────
+    systemctl stop vnc-backend.service 2>/dev/null || true
+    rm -f "/tmp/.X${DISPLAY_NUM}-lock" "/tmp/.X11-unix/X${DISPLAY_NUM}"
+    sleep 1
+
+    if ! systemctl start vnc-backend.service; then
+        print_error "vnc-backend failed to start"
+        journalctl -u vnc-backend.service --no-pager -n 30
         return 1
     fi
+
+    # Poll until Xvnc is listening
+    print_status "Waiting for Xvnc to open port ${VNC_PORT}..."
+    local waited=0
+    until ss -tlnp | grep -q ":${VNC_PORT}"; do
+        sleep 2; (( waited+=2 ))
+        if (( waited >= 30 )); then
+            print_error "Xvnc did not open port ${VNC_PORT} within 30 s"
+            journalctl -u vnc-backend.service --no-pager -n 20
+            return 1
+        fi
+    done
+    print_success "Xvnc listening on port ${VNC_PORT}"
+
+    # ── Start noVNC ───────────────────────────────────────────────────────────
+    if ! systemctl start novnc-proxy.service; then
+        print_error "novnc-proxy failed to start"
+        journalctl -u novnc-proxy.service --no-pager -n 30
+        return 1
+    fi
+
+    sleep 3
+    if ! systemctl is-active --quiet novnc-proxy.service; then
+        print_error "novnc-proxy is not active"
+        journalctl -u novnc-proxy.service --no-pager -n 20
+        return 1
+    fi
+
+    print_success "Both services are running"
 }
 
-# Function to verify installation
+# ──────────────────────────────────────────────────────────────────────────────
 verify_installation() {
     print_status "Verifying installation..."
-    
-    # Check services
-    if systemctl is-active --quiet vnc-backend.service; then
-        print_success "VNC backend service is running"
-    else
-        print_error "VNC backend service is not running"
-        return 1
-    fi
-    
-    if systemctl is-active --quiet novnc-proxy.service; then
-        print_success "noVNC proxy service is running"
-    else
-        print_error "noVNC proxy service is not running"
-        return 1
-    fi
-    
-    # Check ports
-    if ss -tlnp | grep ":$VNC_PORT" >/dev/null; then
-        print_success "VNC is listening on port $VNC_PORT"
-    else
-        print_error "VNC is not listening on port $VNC_PORT"
-        return 1
-    fi
-    
-    if ss -tlnp | grep ":$WEB_PORT" >/dev/null; then
-        print_success "noVNC proxy is listening on port $WEB_PORT"
-    else
-        print_error "noVNC proxy is not listening on port $WEB_PORT"
-        return 1
-    fi
-    
-    # Check VNC process
-    if pgrep -f "Xtigervnc.*:$DISPLAY_NUM" >/dev/null; then
-        print_success "VNC server process is running"
-    else
-        print_error "VNC server process is not running"
-        return 1
-    fi
-    
-    return 0
+    local ok=1
+
+    systemctl is-active --quiet vnc-backend.service  \
+        && print_success "vnc-backend  : active" \
+        || { print_error "vnc-backend  : NOT active"; ok=0; }
+
+    systemctl is-active --quiet novnc-proxy.service  \
+        && print_success "novnc-proxy  : active" \
+        || { print_error "novnc-proxy  : NOT active"; ok=0; }
+
+    ss -tlnp | grep -q ":${VNC_PORT}" \
+        && print_success "VNC port ${VNC_PORT}   : listening" \
+        || { print_error "VNC port ${VNC_PORT}   : NOT listening"; ok=0; }
+
+    ss -tlnp | grep -q ":${WEB_PORT}" \
+        && print_success "Web port ${WEB_PORT}  : listening" \
+        || { print_error "Web port ${WEB_PORT}  : NOT listening"; ok=0; }
+
+    pgrep -x Xvnc &>/dev/null \
+        && print_success "Xvnc process  : running" \
+        || { print_error "Xvnc process  : NOT found"; ok=0; }
+
+    [[ $ok -eq 1 ]]
 }
 
-# Function to display final information
+# ──────────────────────────────────────────────────────────────────────────────
 display_final_info() {
     local ip4
-    ip4=$(hostname -I | awk '{print $1}' || echo "localhost")
-    
+    ip4=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "YOUR_SERVER_IP")
+
     echo
     echo "=================================================================="
-    echo -e "${GREEN}VNC/noVNC Installation Complete!${NC}"
+    echo -e "${GREEN}  VNC/noVNC Installation Complete — Reboot-Safe Edition${NC}"
     echo "=================================================================="
     echo
-    echo "Configuration Summary:"
-    echo "  Target User:         $TARGET_USER"
-    echo "  Desktop Environment: $DESKTOP_ENV"
-    echo "  VNC Display:         :$DISPLAY_NUM"
-    echo "  VNC Port:            $VNC_PORT"
-    echo "  Web Port:            $WEB_PORT"
-    echo "  Geometry:            $VNC_GEOMETRY"
+    echo "  Configuration"
+    echo "    User           : $TARGET_USER"
+    echo "    Desktop        : $DESKTOP_ENV"
+    echo "    Display        : :${DISPLAY_NUM}  (pinned)"
+    echo "    VNC port       : ${VNC_PORT}       (pinned)"
+    echo "    Web port       : ${WEB_PORT}"
+    echo "    Geometry       : ${VNC_GEOMETRY}"
     echo
-    echo "Credentials:"
-    echo "  System User:         $TARGET_USER"
-    echo "  System Password:     (saved in /root/vncuser_system_password.txt)"
-    echo "  VNC Password:        (saved in /root/vncuser_vnc_password.txt)"
+    echo "  Credentials"
+    echo "    System passwd  : /root/vncuser_system_password.txt"
+    echo "    VNC passwd     : /root/vncuser_vnc_password.txt"
     echo
-    echo "Access Information:"
-    echo "  Web Interface:       http://$ip4:$WEB_PORT/vnc.html"
-    echo "  Direct VNC:          $ip4:$VNC_PORT"
-    echo "  Local Web:           http://localhost:$WEB_PORT/vnc.html"
+    echo "  Access"
+    echo "    Browser        : http://${ip4}:${WEB_PORT}/vnc.html"
+    echo "    Direct VNC     : ${ip4}:${VNC_PORT}"
     echo
-    echo "Usage Instructions:"
-    echo "  1. Open a web browser"
-    echo "  2. Navigate to: http://$ip4:$WEB_PORT/vnc.html"
-    echo "  3. Click 'Connect'"
-    echo "  4. Enter your VNC password when prompted"
-    echo "  5. Enjoy your remote desktop!"
+    echo "  Service control"
+    echo "    Restart all    : systemctl restart vnc-backend novnc-proxy"
+    echo "    VNC status     : systemctl status vnc-backend"
+    echo "    noVNC status   : systemctl status novnc-proxy"
+    echo "    VNC logs       : journalctl -u vnc-backend -f"
+    echo "    noVNC logs     : journalctl -u novnc-proxy -f"
     echo
-    echo "Service Management:"
-    echo "  Start VNC:           sudo systemctl start vnc-backend.service"
-    echo "  Stop VNC:            sudo systemctl stop vnc-backend.service"
-    echo "  VNC Status:          sudo systemctl status vnc-backend.service"
-    echo "  Start noVNC:         sudo systemctl start novnc-proxy.service"
-    echo "  Stop noVNC:          sudo systemctl stop novnc-proxy.service"
-    echo "  Restart Both:        sudo systemctl restart vnc-backend.service novnc-proxy.service"
-    echo
-    echo "Troubleshooting:"
-    echo "  VNC Startup Log:     tail -f $USER_HOME/.vnc/startup.log"
-    echo "  VNC Server Log:      tail -f $USER_HOME/.vnc/$(hostname):$DISPLAY_NUM.log"
-    echo "  System VNC Logs:     journalctl -u vnc-backend.service -f"
-    echo "  System noVNC Logs:   journalctl -u novnc-proxy.service -f"
-    echo "  Check Processes:     ps aux | grep vnc"
-    echo "  Check Ports:         ss -tlnp | grep -E ':(5902|6080)'"
-    echo "  Manual VNC Test:     sudo -u $TARGET_USER bash -c 'cd $USER_HOME && vncserver :$DISPLAY_NUM'"
-    echo "  Kill Manual Test:    sudo -u $TARGET_USER vncserver -kill :$DISPLAY_NUM"
+    echo "  Troubleshooting"
+    echo "    Startup log    : tail -f ${USER_HOME}/.vnc/startup.log"
+    echo "    Xvnc log       : tail -f ${USER_HOME}/.vnc/\$(hostname):${DISPLAY_NUM}.log"
+    echo "    Ports          : ss -tlnp | grep -E ':(${VNC_PORT}|${WEB_PORT})'"
+    echo "    Processes      : pgrep -a Xvnc"
     echo "=================================================================="
 }
 
-# Main installation function
+# ──────────────────────────────────────────────────────────────────────────────
 main() {
     echo "=================================================================="
-    echo "VNC/noVNC Complete Installer for Clean Debian/Ubuntu - FIXED"
+    echo "  VNC/noVNC Installer — Reboot-Safe Edition"
     echo "=================================================================="
     echo
-    
-    # Preliminary checks
+
     check_root
     detect_os
     fix_hostname_resolution
-    
-    # Create vncuser first
     create_vncuser
-    
-    # Installation steps
+
     update_system
     install_base_packages
     install_vnc_packages
     install_x11_packages
     install_desktop_environment
     install_additional_packages
-    
-    # Configuration steps
+
     setup_vnc_password
     create_xstartup_script
-    setup_display_and_ports
-    
-    # Testing and service setup
-    if test_vnc_manual; then
-        create_systemd_services
-        configure_firewall
-        start_services
-        
-        if verify_installation; then
-            display_final_info
-            print_success "Installation completed successfully!"
-            echo
-            print_status "The VNC server is now running with these improvements:"
-            echo "  ✓ Hostname resolution dynamically fixed"
-            echo "  ✓ Non-sudoer user 'vncuser' created"
-            echo "  ✓ Auto-generated passwords saved securely"
-            echo "  ✓ TigerVNC migration issue fixed"
-            echo "  ✓ Bulletproof xstartup script with error recovery"
-            echo "  ✓ Multiple window manager fallbacks"
-            echo "  ✓ Robust systemd service configuration"
-            echo "  ✓ Enhanced logging for troubleshooting"
-            echo "  ✓ Automatic session monitoring and restart"
-            echo "  ✓ Proper service dependencies and timing"
-            exit 0
-        else
-            print_error "Installation verification failed"
-            echo "Please check the logs and try the manual troubleshooting commands above."
-            exit 1
-        fi
+    create_systemd_services
+    configure_firewall
+
+    start_services
+
+    if verify_installation; then
+        display_final_info
+        print_success "Installation complete!"
+        echo
+        echo "  Reboot-safety improvements applied:"
+        echo "  ✓ Xvnc runs directly — no vncserver wrapper process"
+        echo "  ✓ Display :${DISPLAY_NUM} / port ${VNC_PORT} pinned (never shifts on reboot)"
+        echo "  ✓ xstartup launched via ExecStartPost (desktop separate from tracked PID)"
+        echo "  ✓ ExecStop kills by lock-file PID (always correct process)"
+        echo "  ✓ websockify binary used directly in novnc-proxy"
+        echo "  ✓ Both services enabled for automatic start on every boot"
+        echo "  ✓ 30 s port-readiness gate between VNC start and noVNC start"
+        echo "  ✓ --heartbeat 30 keeps WebSocket alive through NAT/firewalls"
+        exit 0
     else
-        print_error "Manual VNC test failed. Installation aborted."
-        echo "This indicates a fundamental issue with the VNC setup."
-        echo "Please check the system logs and try running the installation again."
+        print_error "Post-install verification failed."
+        echo "Run: journalctl -u vnc-backend --no-pager -n 40"
+        echo "Run: journalctl -u novnc-proxy --no-pager -n 40"
         exit 1
     fi
 }
 
-# Script entry point
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     main "$@"
 fi
