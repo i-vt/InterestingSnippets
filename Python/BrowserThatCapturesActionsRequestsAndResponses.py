@@ -6,6 +6,10 @@
 ║  Press CTRL+C to export everything locally           ║
 ╚══════════════════════════════════════════════════════╝
 
+Install:
+  pip install playwright
+  playwright install chromium
+
 Usage:
   python3 burpbuddy.py https://example.com
   python3 burpbuddy.py                      (prompts for URL)
