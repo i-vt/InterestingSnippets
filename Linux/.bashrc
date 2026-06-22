@@ -89,6 +89,7 @@ alias s2022='python3 -m http.server 2022'
 alias wgup='wg-quick up /etc/wireguard/wg0.conf'
 alias wgdown='wg-quick down /etc/wireguard/wg0.conf'
 alias ports='ss -tulnp'
+alias uploadserver='cd ~/Documents/InterestingSnippets-main/Python/uploadserver/ && python3 ~/Documents/InterestingSnippets-main/Python/uploadserver/uploadserver.py'
 
 # ── Default editor ────────────────────────────────────────────────────────────
 export EDITOR=vi
