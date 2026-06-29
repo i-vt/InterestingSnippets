@@ -2,6 +2,7 @@
 
 # Fail2ban SSH Installation Script for Debian
 # This script installs and configures fail2ban to protect SSH
+# Fixed: uses systemd backend (no dependency on /var/log/auth.log)
 
 set -e  # Exit on any error
 
@@ -45,7 +46,15 @@ apt update
 print_status "Installing fail2ban..."
 apt install -y fail2ban
 
+# Stop service before writing config
+systemctl stop fail2ban 2>/dev/null || true
+
+# Remove stale socket if present from previous failed run
+rm -f /var/run/fail2ban/fail2ban.sock
+
 # Create jail.local configuration file
+# NOTE: Uses backend=systemd so no dependency on /var/log/auth.log,
+#       which is absent on Debian 11/12 when rsyslog is not installed.
 print_status "Creating fail2ban configuration..."
 cat > /etc/fail2ban/jail.local << 'EOF'
 [DEFAULT]
@@ -72,22 +81,24 @@ action = %(action_)s
 
 [sshd]
 # Enable SSH protection
-enabled = true
+enabled  = true
 
-# Port to monitor (change if SSH runs on different port)
-port = ssh
+# Port to monitor (change if SSH runs on a non-standard port)
+port     = ssh
 
 # Filter to use
-filter = sshd
+filter   = sshd
 
-# Log file to monitor
-logpath = /var/log/auth.log
+# Use systemd journal as the log source.
+# This works on Debian 11/12+ where /var/log/auth.log does not exist
+# because rsyslog is not installed by default.
+backend  = systemd
 
-# Maximum retry attempts
+# Maximum retry attempts before ban
 maxretry = 3
 
 # Ban time for SSH (30 minutes)
-bantime = 1800
+bantime  = 1800
 
 # Find time window (10 minutes)
 findtime = 600
@@ -111,8 +122,16 @@ failregex = ^%(__prefix_line)s(?:error: PAM: )?[aA]uthentication (?:failure|erro
             ^%(__prefix_line)sConnection closed by <HOST> \[preauth\]\s*$
             ^%(__prefix_line)sConnection closed by <HOST> port \d+ \[preauth\]\s*$
 
-ignoreregex = 
+ignoreregex =
 EOF
+
+# Validate configuration before attempting to start
+print_status "Validating fail2ban configuration..."
+if ! fail2ban-client -t; then
+    print_error "Configuration test failed. See errors above."
+    exit 1
+fi
+print_success "Configuration test passed"
 
 # Enable and start fail2ban service
 print_status "Enabling and starting fail2ban service..."
@@ -126,7 +145,7 @@ sleep 2
 if systemctl is-active --quiet fail2ban; then
     print_success "Fail2ban service is running"
 else
-    print_error "Fail2ban service failed to start"
+    print_error "Fail2ban service failed to start. Run: journalctl -u fail2ban -n 30 --no-pager"
     exit 1
 fi
 
@@ -139,7 +158,7 @@ print_status "SSH jail status:"
 fail2ban-client status sshd
 
 # Create a simple management script
-print_status "Creating management script..."
+print_status "Creating management script at /usr/local/bin/f2b-manage..."
 cat > /usr/local/bin/f2b-manage << 'EOF'
 #!/bin/bash
 # Simple fail2ban management script
@@ -171,7 +190,7 @@ case "$1" in
         ;;
     logs)
         echo "=== Recent fail2ban logs ==="
-        tail -n 20 /var/log/fail2ban.log
+        journalctl -u fail2ban -n 20 --no-pager
         ;;
     *)
         echo "Usage: $0 {status|unban <ip>|banned|restart|logs}"
@@ -194,24 +213,25 @@ print_success "Fail2ban installation and configuration completed!"
 echo ""
 print_status "Configuration Summary:"
 echo "  • SSH protection: ENABLED"
-echo "  • Max retries: 3 attempts"
-echo "  • Ban time: 30 minutes"
-echo "  • Find time: 10 minutes"
-echo "  • Monitored log: /var/log/auth.log"
+echo "  • Log backend:    systemd journal (no /var/log/auth.log required)"
+echo "  • Max retries:    3 attempts"
+echo "  • Ban time:       30 minutes"
+echo "  • Find time:      10 minutes"
 echo ""
 print_status "Management:"
-echo "  • Check status: f2b-manage status"
-echo "  • View logs: f2b-manage logs"
-echo "  • Unban IP: f2b-manage unban <IP>"
+echo "  • Check status:    f2b-manage status"
+echo "  • View logs:       f2b-manage logs"
+echo "  • Unban IP:        f2b-manage unban <IP>"
 echo "  • View banned IPs: f2b-manage banned"
 echo ""
 print_status "Configuration files:"
-echo "  • Main config: /etc/fail2ban/jail.local"
+echo "  • Main config:    /etc/fail2ban/jail.local"
 echo "  • Service status: systemctl status fail2ban"
 echo ""
 print_warning "Important Notes:"
 echo "  • Make sure you have alternative access (console/KVM) in case you get locked out"
-echo "  • Consider adding your trusted IP to ignoreip in /etc/fail2ban/jail.local"
-echo "  • Monitor /var/log/fail2ban.log for activity"
+echo "  • Consider adding your trusted IP to ignoreip in /etc/fail2ban/jail.local:"
+echo "    ignoreip = 127.0.0.1/8 ::1 YOUR.TRUSTED.IP.HERE"
+echo "  • Monitor logs with: f2b-manage logs"
 echo ""
 print_success "Your server is now protected against SSH brute force attacks!"
