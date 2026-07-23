@@ -7,4 +7,4 @@
 * When an error occurs more than once, add heavier debugging to help produce logs with relevant information. DO NOT KEEP TRYING TO FIX THE ISSUE BLINDLY
 * When writing new features optimize and secure the code. When working with existing code segments (legacy code) suggest best security practices where needed (but ASK before implementing). 
 * VERIFY ALL EXISTING TESTS PASS (IF THERE ARE ANY) AFTER THE ADDITION OF NEW CODE.
-* Do not add, instead remove/replace/update all comments that contain stuff like: NEW FEATURE ADDED, FIXED, date and time marked of the fix, em dashes, or any other ai assisted indicators. If needed update the comment to remove by rewriting the part that contains any of these elements. 
+* Do not add, instead remove/replace/update all comments that contain stuff like: NEW FEATURE ADDED, FIXED, date and time marked of the fix, em dashes, or any other ai assisted indicators. If needed update the comment to remove by rewriting the part that contains any of these elements, example: instead of an em-dash replace it with a regular dash "-".
