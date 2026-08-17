@@ -1,0 +1,41 @@
+# Title: Summarize the change
+# - Imperative mood
+# - Capitalize the first word
+# - No period at the end
+# - Maximum 50 characters
+#
+# Leave one blank line between the title and body.
+#
+# Body:
+# - Explain what changed and why, not how.
+# - Include the Jira issue/task ID.
+# - Wrap lines at 70 characters:
+# ################################################## which is here:  #
+#
+# Leave at least one blank line before the contributor section.
+#
+# Contributors:
+# Include a Co-authored-by trailer for every contributor.
+# Format:
+# Co-authored-by: Name <user@users.noreply.github.com>
+#
+# Commit message guidelines:
+# 1. Separate the subject from the body with a blank line.
+# 2. Limit the subject to 50 characters.
+# 3. Capitalize the subject line.
+# 4. Do not end the subject with a period.
+# 5. Use the imperative mood.
+# 6. Wrap the body at 70 characters.
+# 7. Explain what and why in the body, not how.
+# 8. The # characters above are comments and are not part of the
+# commit message. Remove them when writing the actual commit.
+#
+# Example:
+#
+# Fix checkout timeout on slow networks
+#
+# ABC-123: Increase the checkout timeout to prevent failures
+# when requests take longer than the previous limit. This
+# improves reliability for customers on slower connections.
+#
+# Co-authored-by: Jane Doe <jane.doe@users.noreply.github.com>
