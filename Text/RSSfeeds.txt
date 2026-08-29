@@ -1,6 +1,7 @@
 http://feeds.trendmicro.com/TrendMicroResearch
 https://any.run/cybersecurity-blog/feed/
 https://blog.itsecurityexpert.co.uk/feeds/posts/default?alt=atom
+https://cyberbuilders.substack.com/feed
 https://cyberhoot.com/category/blog/feed/
 https://cyble.com/feed/
 https://dataprivacymanager.net/feed/
@@ -14,13 +15,11 @@ https://info-savvy.com/feed/
 https://krebsonsecurity.com/feed/
 https://lab.wallarm.com/feed/
 https://lynxtechnologypartners.com/blog/feed/
-https://news.sophos.com/en-us/feed/
 https://protegent360.com/blog/feed/
 https://sectigostore.com/blog/feed/
 https://securityaffairs.co/wordpress/feed
 https://socprime.com/feed/
 https://taosecurity.blogspot.com/feeds/posts/default?alt=rss
-https://thecybermaniacs.com/cm-blog/rss.xml
 https://ventureinsecurity.net/feed
 https://wesecureapp.com/feed/
 https://www.acunetix.com/blog/feed/
@@ -33,11 +32,8 @@ https://www.darkreading.com/rss.xml
 https://www.exploitone.com/feed/
 https://www.ignyteplatform.com/feed/
 https://www.infosecurity-magazine.com/rss/news/
-https://www.itgovernance.co.uk/blog/category/cyber-security/feed
 https://www.jisasoftech.com/feed/
 https://www.lastwatchdog.com/feed/
-https://www.logpoint.com/en/feed/
-https://www.mcafee.com/blogs/feed/
 https://www.nist.gov/blogs/cybersecurity-insights/rss.xml
 https://www.schneier.com/feed/atom/
 https://www.scnsoft.com/blog/category/information-security/atom
