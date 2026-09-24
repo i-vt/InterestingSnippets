@@ -29,7 +29,9 @@ Component: ConsoleWrap
 Interface: IConsole {}
 ```
 
-1. Check the KVM is loaded (something like this):
+1. Check the KVM is loaded via the command `lsmod | grep kvm`
+
+AMD: 
 ```
 usr@computa:/home/usr$ lsmod | grep kvm
 kvm_amd              [somenum]  0
@@ -37,11 +39,29 @@ kvm                  [somenum]  1 kvm_amd
 irqbypass            [somenum]  1 kvm
 ccp                  [somenum]  1 kvm_amd
 ```
+
+Intel: 
+```
+user@host: lsmod | grep kvm
+kvm_intel             413696  0
+kvm                  1396736  1 kvm_intel
+irqbypass              12288  1 kvm
+```
+
 2. Unload them
+
+AMD: 
 ```
 sudo modprobe -r kvm_amd
 sudo modprobe -r kvm
 ```
+
+Intel:
+```
+sudo modprobe -r kvm_intel
+sudo modprobe -r kvm
+```
+
 3. Restart the VirtualBox 
 
 4. (OPTIONAL) make it permanent & break KVM + Quemu
