@@ -65,8 +65,17 @@ sudo modprobe -r kvm
 3. Restart the VirtualBox 
 
 4. (OPTIONAL) make it permanent & break KVM + Quemu
+AMD: 
 ```
 echo "blacklist kvm_amd" | sudo tee /etc/modprobe.d/blacklist-kvm.conf
+echo "blacklist kvm" | sudo tee -a /etc/modprobe.d/blacklist-kvm.conf
+sudo update-initramfs -u
+sudo reboot
+```
+
+Intel:
+```
+echo "blacklist kvm_intel" | sudo tee /etc/modprobe.d/blacklist-kvm.conf
 echo "blacklist kvm" | sudo tee -a /etc/modprobe.d/blacklist-kvm.conf
 sudo update-initramfs -u
 sudo reboot
