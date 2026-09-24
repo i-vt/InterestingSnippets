@@ -31,7 +31,7 @@ Interface: IConsole {}
 
 1. Check the KVM is loaded via the command `lsmod | grep kvm`
 
-AMD: 
+* AMD: 
 ```
 usr@computa:/home/usr$ lsmod | grep kvm
 kvm_amd              [somenum]  0
@@ -40,7 +40,7 @@ irqbypass            [somenum]  1 kvm
 ccp                  [somenum]  1 kvm_amd
 ```
 
-Intel: 
+* Intel: 
 ```
 user@host: lsmod | grep kvm
 kvm_intel             413696  0
@@ -50,13 +50,13 @@ irqbypass              12288  1 kvm
 
 2. Unload them
 
-AMD: 
+* AMD: 
 ```
 sudo modprobe -r kvm_amd
 sudo modprobe -r kvm
 ```
 
-Intel:
+* Intel:
 ```
 sudo modprobe -r kvm_intel
 sudo modprobe -r kvm
@@ -65,7 +65,8 @@ sudo modprobe -r kvm
 3. Restart the VirtualBox 
 
 4. (OPTIONAL) make it permanent & break KVM + Quemu
-AMD: 
+
+* AMD: 
 ```
 echo "blacklist kvm_amd" | sudo tee /etc/modprobe.d/blacklist-kvm.conf
 echo "blacklist kvm" | sudo tee -a /etc/modprobe.d/blacklist-kvm.conf
@@ -73,7 +74,7 @@ sudo update-initramfs -u
 sudo reboot
 ```
 
-Intel:
+* Intel:
 ```
 echo "blacklist kvm_intel" | sudo tee /etc/modprobe.d/blacklist-kvm.conf
 echo "blacklist kvm" | sudo tee -a /etc/modprobe.d/blacklist-kvm.conf
