@@ -1,4 +1,15 @@
 # Git
+
+## Generate Keys
+
+```
+ssh-keygen -t ed25519 -f ~/.ssh/deploy_myrepo -C "deploy-myrepo"
+cat ~/.ssh/deploy_myrepo.pub
+#git config core.sshCommand "ssh -i ~/.ssh/deploy_myrepo"
+#git clone git@github.com:owner/repo.git
+ssh -i ~/.ssh/deploy_myrepo -T git@github.com
+```
+
 ## Install
 ```
 sudo apt update
