@@ -50,6 +50,21 @@ else
   fi
 fi
 
+# ─── Install curl if missing ───────────────────────────────────────────────────
+if command -v curl >/dev/null 2>&1; then
+  echo "curl is already installed."
+else
+  echo "curl is NOT installed. Attempting to install..."
+  apt-get update
+  apt-get install -y curl
+  if command -v curl >/dev/null 2>&1; then
+    echo "curl installed successfully."
+  else
+    echo "ERROR: Failed to install curl."
+    exit 1
+  fi
+fi
+
 # ─── System Update & Upgrade ───────────────────────────────────────────────────
 echo "Updating and upgrading system packages..."
 sudo apt update -y && sudo apt upgrade -y \
