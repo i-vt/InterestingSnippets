@@ -27,6 +27,21 @@ else
   echo "Nameserver already set correctly."
 fi
 
+# ─── Install curl if missing ───────────────────────────────────────────────────
+if command -v curl >/dev/null 2>&1; then
+  echo "curl is already installed."
+else
+  echo "curl is NOT installed. Attempting to install..."
+  apt-get update
+  apt-get install -y curl
+  if command -v curl >/dev/null 2>&1; then
+    echo "curl installed successfully."
+  else
+    echo "ERROR: Failed to install curl."
+    exit 1
+  fi
+fi
+
 # ─── Internet Connectivity Check ───────────────────────────────────────────────
 echo "Checking internet connectivity..."
 if ! curl -fsS --max-time 10 https://api.ipify.org/ > /dev/null; then
@@ -46,21 +61,6 @@ else
     echo "sudo installed successfully."
   else
     echo "ERROR: Failed to install sudo."
-    exit 1
-  fi
-fi
-
-# ─── Install curl if missing ───────────────────────────────────────────────────
-if command -v curl >/dev/null 2>&1; then
-  echo "curl is already installed."
-else
-  echo "curl is NOT installed. Attempting to install..."
-  apt-get update
-  apt-get install -y curl
-  if command -v curl >/dev/null 2>&1; then
-    echo "curl installed successfully."
-  else
-    echo "ERROR: Failed to install curl."
     exit 1
   fi
 fi
