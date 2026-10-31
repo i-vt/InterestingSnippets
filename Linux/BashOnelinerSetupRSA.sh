@@ -1,0 +1,1 @@
+KEYNAME="test1"; ssh-keygen -t rsa -b 4096 -f ~/.ssh/"$KEYNAME" -C "$KEYNAME"; echo -e "\nPublic: ~/.ssh/$KEYNAME.pub\n"; cat ~/.ssh/"$KEYNAME".pub; echo -e "\nPrivate: ~/.ssh/$KEYNAME\n"; cat ~/.ssh/"$KEYNAME"
