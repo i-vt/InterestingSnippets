@@ -24,3 +24,9 @@
 * For web applications by default configure without HTTPS, however, allow for HTTPS with a domain if configured in .env.
 * Ensure it self-recovers after reboot. Log all errors.
 * The fixes deployed (ex.: missing packages) should be done by updating the deployment scripts (not a one-time fix). If an error has a missing package it should be updated in deploy to check if its installed, if not install it during the deployment scripts.
+
+## Accounts
+* Admin account should be generated via a one-time admin registration link to create it should be reflected in the system logs. Enumerate all IPs and display links to register for each IP. 
+* Other members can be registered via a link, link generated on admin panel and uses the public IP (if available) ready to copy/paste.
+* Admin should be able to disable a user, reset password (give user a password reset link), delete data.
+* Add telegram bot interface for users and admin.
