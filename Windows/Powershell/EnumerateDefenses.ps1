@@ -1,69 +1,58 @@
 #Requires -Version 3.0
 <#
 .SYNOPSIS
-    Rates how strongly this Windows machine appears to be defended, and
-    produces the Decision Gate 1 one-line threat rating.
+    Phase 1 enumeration: inventories the defensive landscape of this Windows
+    machine and prints everything it finds, grouped to feed Decision Gate 1.
 
 .DESCRIPTION
-    Inventories the watchers (EDR/XDR processes and services, registered AV,
-    Defender posture, credential protection, logging and policy depth, egress
-    shaping, and mid-incident smells) and converts them into a 1-10 rating
-    with one of three bands that map directly to the Phase 5 comms table:
+    Produces the raw material for the Gate 1 one-line threat rating - nothing
+    more. There is deliberately NO score: rating the environment is the
+    student's judgment call, and a number on a script output is not a
+    substitute for reading the evidence (the notes' whole point is converting
+    findings into a tempo decision, not into a dial position).
 
-        Rating  Band       Comms tempo (Phase 5)
-        1-3     Legacy     faster acceptable; audit flips without notice
-        4-6     Moderate   measured tempo
-        7-10    Watched    long-haul, identity-first, small tasking
+    Groups, mirroring the course notes:
+      1. Endpoint protection  (EDR/AV processes, services, SecurityCenter2
+         registrations with productState decode, Defender status, Defender
+         preferences, exclusions, ASR rules, Defender threat history)
+      2. Credential & platform protection (PPL, Credential Guard, VBS, LSA
+         auditing values, WDigest, cached logons, NTLM level, Kerberos
+         crypto, LAPS, TPM, Secure Boot, BitLocker)
+      3. Logging & telemetry  (PowerShell logging keys, full value walk,
+         WinRM, event log inventory, WEF, Sysmon, effective audit policy)
+      4. Policy & hardening   (AppLocker detail, WDAC detail, UAC, process
+         mitigations, firewall, SmartScreen, SMB signing, LLMNR/mDNS/NetBIOS)
+      5. Egress & network     (userland/machine proxy, PAC, DNS, DoH, IPv6,
+         Teredo, winsock catalog, non-standard root CAs)
+      6. Management plane     (SCCM, Intune/Entra join, applied GPO history,
+         recent security installs, recent security tasks, MDE active IR)
+      7. Patch state          (OS build/UBR, last hotfixes)
 
-    Raw evidence is scored around zero (positive points = watched signals,
-    negative points = legacy/open signals); +5 is then added to shift
-    "no evidence either way" to the neutral 5. Every matched signal is
-    listed with the points it added or subtracted, so the verdict is
-    auditable and the weights are easy to tweak after lab runs.
-
-    The script is read-only: CIM/WMI, registry, and certificate store reads
-    only. It deliberately spawns NOTHING - netsh.exe, sc.exe, tasklist.exe,
-    and wevtutil.exe are all replaced by in-process equivalents, per the
-    Phase 1 ground rules.
+    Read-only throughout. Spawns nothing except ONE justified auditpol.exe
+    call (reading the effective audit policy has no in-process equivalent).
+    Everything else is CIM/WMI, registry, certificate store, or cmdlet reads.
 
 .EXAMPLE
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Get-ThreatRating.ps1
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Get-DefensiveLandscape.ps1
 
 .EXAMPLE
-    # Add one justified reachability test against your redirector (-Port 443)
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Get-ThreatRating.ps1 -Redirector c2.example.com
+    # Add one justified reachability test against your redirector (TCP 443)
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Get-DefensiveLandscape.ps1 -Redirector c2.example.com
 
 .NOTES
-    Read-only; no admin required for most signals. A few reads (LSA keys,
-    DeviceGuard namespace on some builds) may return nothing without
-    elevation - missing evidence scores neutral and is listed as "not
-    visible", never as "not configured". Run elevated when you can.
+    Read-only; most signals visible without elevation. Reads that fail
+    because of missing elevation or missing RSAT modules are printed as
+    "not visible", never silently assumed absent - on a red engagement the
+    difference between "not configured" and "could not read" matters.
 
-    Design notes for tricky cases:
-      - Block-vs-audit mode can NOT be proven passively. This script guesses:
-        RTP on + tamper on + a cloud sensor (MDE Sense, CrowdStrike, S1,
-        etc.) is treated as "block-guess"; product present but RTP/tamper
-        off is treated as "audit-guess". The guess is printed, not hidden.
-      - SenseIR.exe / SenseCNR.exe are MDE investigation/remediation
-        processes. Their presence means MDE is actively working THIS host -
-        scored as an incident multiplier, not as ordinary sensor presence.
-      - winhttp proxy is read from the registry binary
-        (HKLM\...\Internet Settings\Connections\WinHttpSettings) instead of
-        spawning netsh.exe. The binary layout is undocumented; the proxy
-        string is extracted at the community-documented offset 8 and the raw
-        finding is printed so you can verify against netsh output in the lab.
-      - The TLS-inspection check matches corporate-sounding issuing CAs
-        (Zscaler/Netskope/Forti/etc.). Matching bare "CA" was rejected
-        because public roots like "DigiCert Global Root CA" would
-        false-positive on every patched machine on earth.
-      - SecurityServicesRunning integer mapping (1 vs 2 for Credential
-        Guard) is inconsistent across documentation. This script treats 2 as
-        Credential Guard to match the course notes, cross-checks against
-        LsaCfgFlags, and prints the raw integers so the lab can verify.
-      - This script is one long ScriptBlock-logging confession on a box
-        where section 1.4 found EnableScriptBlockLogging=1. From a beacon,
-        prefer inlining it; from disk, prefer staging before the engagement.
-        The course doctrine applies to the course tooling.
+    productState decode (SecurityCenter2): 6 hex digits; digit pair 2 is
+    real-time state (00 on, 01 expired, 10 off/snoozed), pair 3 is signature
+    freshness (00 up to date, 10 out of date). Raw value printed alongside.
+
+    This script is one long ScriptBlock-logging confession on a box where
+    PowerShell logging is enabled. From a beacon, prefer inlining it; from
+    disk, prefer staging before the engagement. Course doctrine applies to
+    course tooling.
 #>
 [CmdletBinding()]
 param(
@@ -74,301 +63,481 @@ param(
 
 $ErrorActionPreference = 'SilentlyContinue'
 
-$script:score   = 0
-$script:reasons = New-Object System.Collections.Generic.List[string]
+# ------------------------------- output helpers ------------------------------
+function Write-Section([string]$Title) {
+    Write-Host ''
+    Write-Host "== $Title ==" -ForegroundColor Cyan
+}
+function Write-Finding([string]$Text)   { Write-Host "  - $Text" }
+function Write-Note([string]$Text)      { Write-Host "    [note] $Text" -ForegroundColor DarkGray }
 
-function Add-Signal {
-    param(
-        [int]$Points,
-        [string]$Why
-    )
-    $script:score += $Points
-    [void]$script:reasons.Add(('{0:+0;-0;0}' -f $Points, $Why))
+# Walk ALL values under a registry key instead of hardcoding names.
+function Show-RegValues([string]$Path, [string]$Label) {
+    $k = Get-Item $Path
+    if (-not $k) { Write-Note "$Label : key not present (or not visible without elevation)"; return }
+    $props = $k.Property
+    if (-not $props -or $props.Count -eq 0) { Write-Note "$Label : key exists, no values set"; return }
+    foreach ($p in $props) {
+        $v = (Get-ItemProperty $Path -Name $p).$p
+        if ($v -is [byte[]]) { $v = 'binary[' + $v.Length + ' bytes]' }
+        Write-Finding "$Label : $p = $v"
+    }
 }
 
-# ---------------------------- signal patterns ------------------------------
-# Running security products (process names). MDE pieces are separated out
-# because SenseIR/SenseCNR mean active investigation, not just presence.
-$edrProcessPattern   = 'MsMpEng|csagent|csfalcon|SentinelAgent|SentinelOne|elastic-endpoint|edpa|fcags|Tanium|CbDefense|CarbonBlack|ossec|wazuh|qualys|TMBMSRV|Sophos|bdagent|avp|xagt|mdatp|Cylance|cybereason'
-$mdePresencePattern = 'MsMpEng|MsSense|^Sense$|SenseCM'
-$mdeActivePattern   = 'SenseIR|SenseCNR'
+# ------------------------------ vendor patterns ------------------------------
+# Running security-product processes. Extensible; add your lab's products.
+$edrProcessPattern = 'MsMpEng|MsSense|Sense|csagent|csfalcon|Cybereason|Cylance|SentinelAgent|SentinelOne|elastic-endpoint|edpa|fcags|ssav|savservice|Tanium|CbDefense|ossec|wazuh|qualys|QAGENT|TMBMSRV|TmListen|TmCCSF|ntrtscan|Sophos|bdagent|avp|kavfs|xagt|mdatp|WRSA|avast|aswService|avg|ccSvcHst|mcshield|McAfee|mfeaskm|mfemms|winlogbeat|filebeat|Velociraptor|osqueryd'
+$edrServicePattern = 'windefend|WdNisSvc|^sense$|CSAgent|csfalcon|SentinelAgent|Tanium Client|elastic-agent|qualys|savsvc|Sophos|bdagent|avp|xagt|mdatp|CylanceSvc|CybereasonCRS|ossec|WazuhSvc|TMBMSRV|WRSVC|mcshield|mfemms|Velociraptor|osqueryd|huntress'
+$secDirPattern     = 'Defender|CrowdStrike|Sentinel|Sophos|Tanium|Velociraptor|osquery|Carbon|Cybereason|Cylance|FireEye|Mandiant|Qualys|Elastic|Wazuh|Rapid7|Vectra|Extrahop|Huntress|Trend|McAfee|Kaspersky|Bitdefender|Avast|AVG|Webroot|Malwarebytes'
+$tlsCaPattern      = 'Zscaler|Netskope|Forti|Blue Coat|Palo Alto|Inspect|WEBFILTER|Interception|Squid|Proxy|Data443|GigaTrust|Bitglass'
 
-# Log shippers are scored separately from EDR: a beat means a pipeline
-# exists, which means a SOC exists - telemetry without enforcement.
-$shipperPattern     = 'winlogbeat|filebeat'
-
-# Security services worth naming in the evidence list.
-$edrServicePattern = 'windefend|sense$|csagent|sentinel|tanium|elastic|qualys|sav$|macmnsvc|CylanceSvc|cybereason'
-
-# Threat-hunt agents: presence implies a hunt program, not just endpoint
-# protection - that is the incident multiplier, and it is worth more.
-$huntPattern = 'Velociraptor|osqueryd|ir-agent|Tanium'
-
-# Recently-installed security software under Program Files.
-$secDirPattern = 'Defender|CrowdStrike|Sentinel|Sophos|Tanium|Velociraptor|osquery|Carbon|Cybereason|Cylance|FireEye|Mandiant|Qualys|Elastic|Wazuh|Rapid7|Vectra|Extrahop|Huntress'
-
-# Corporate TLS-interception issuing CAs. Deliberately NOT bare 'CA'.
-$tlsCaPattern = 'Zscaler|Netskope|Forti|Blue Coat|Palo Alto|Inspect|WEBFILTER|Interception|Squid|Proxy'
+# Well-known public CA names; roots NOT matching this list are printed as
+# possible TLS-interception / enterprise-issuing CAs.
+$publicCaPattern = 'DigiCert|VeriSign|Baltimore|Entrust|GlobalSign|Sectigo|Comodo|GeoTrust|Thawte|Go Daddy|Starfield|USERTrust|AAA|Amazon|Google|Microsoft|Let''s Encrypt|ISRG|QuoVadis|Symantec|GTE|AddTrust|DST|Cybertrust|Equifax|D-TRUST|Hellenic|LuxTrust|NetLock|Buypass|Certum|Chambers|ePKI|HiPKI|Hongkong|POSTAR|SecureSign|SecureTrust|Sonera|Staat|SwissSign|T-TeleSec|Trustwave|TWCA|UCA|ACCV|AC RAIZ|A-Trust|Autoridad|certSIGN|CFCA|Disig|EBG|E-Tugra|FNMT|Microsec|OISTE|SK ID|Swisscom|Telia|TUBITAK|Visa|Wells|XRamp|IdenTrust|SECOM|Trustis|Telesec|Juur|Firmaprofesional|Global Chambers|KISA|Netrust|Government|Ministry|WISeKey|OpenTrust|Opentrust|TeliaSonera|CNNIC|Cairometrics|Castilla|Certinomis|certum|CFuK|China|CIK|Cisco|CTPS|Deutsche|DFN|DocuSign|Echoworx|EDICOM|e-Szigno|Fina|FNMT|German|IGC|Izenpe|KOREA|Luxtrust|MACP|ncipher|Open Access|Polskie|PRV|RSA|SGC|SSL|S-TRUST|StartCom|Swiss Government|Taiwan|Thawte|TWCA|Unizeto|VRK|WISeKey'
 
 # ------------------------------- data harvest -------------------------------
 $isElevated = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
-$processes = @(Get-CimInstance Win32_Process | Where-Object { $_.Name -match "$edrProcessPattern|$mdePresencePattern|$mdeActivePattern|$shipperPattern" } | Select-Object -ExpandProperty Name)
-$services  = @(Get-CimInstance Win32_Service | ForEach-Object { $_.Name })
-$avProducts = @(Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntiVirusProduct | Select-Object -ExpandProperty displayName)
-
+$os         = Get-CimInstance Win32_OperatingSystem
+$cs         = Get-CimInstance Win32_ComputerSystem
+$procs      = @(Get-CimInstance Win32_Process | Where-Object { $_.Name -match $edrProcessPattern } | Select-Object Name, ProcessId, ExecutablePath)
+$svcs       = @(Get-CimInstance Win32_Service | Where-Object { $_.Name -match $edrServicePattern } | Select-Object Name, State, StartMode, PathName, StartName)
+$avProducts = @(Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntiVirusProduct)
+$asProducts = @(Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntiSpywareProduct)
+$fwProducts = @(Get-CimInstance -Namespace root/SecurityCenter2 -ClassName FirewallProduct)
 try { $mp = Get-MpComputerStatus } catch { $mp = $null }
+try { $mpPref = Get-MpPreference } catch { $mpPref = $null }
+try { $dg = Get-CimInstance -Namespace root\Microsoft\Windows\DeviceGuard -ClassName Win32_DeviceGuard } catch { $dg = $null }
 
-# ----------------------- evidence: EDR / AV presence ------------------------
-$mdeActive   = @($processes | Where-Object { $_ -match $mdeActivePattern })
-$mdePresent  = ($processes | Where-Object { $_ -match $mdePresencePattern }).Count -gt 0 -or
-               (@($services | Where-Object { $_ -match '^sense$' })).Count -gt 0
-$otherEdr    = @($processes | Where-Object { $_ -match $edrProcessPattern })
-$edrServices = @($services | Where-Object { $_ -match $edrServicePattern })
+Write-Host ''
+Write-Host '=============================================================='
+Write-Host ("  Defensive landscape : {0} / {1}" -f $cs.Name, $os.Caption)
+Write-Host ("  Build {0}.{1}  ({2})" -f $os.Version, (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -Name UBR).UBR, $os.InstallDate)
+Write-Host ("  Elevated: {0}" -f $isElevated)
+Write-Host '=============================================================='
 
-if ($mdeActive.Count -gt 0) {
-    Add-Signal 2 "MDE investigation process '$($mdeActive[0])' is running - active IR on THIS host (incident multiplier)"
-}
-if ($mdePresent) {
-    Add-Signal 4 "Defender plus MDE cloud sensor present (Sense/MsMpEng) - cloud analytics, block-mode guess"
-}
-elseif ($otherEdr.Count -gt 0) {
-    Add-Signal 3 "Third-party EDR process '$($otherEdr[0])' present - block-mode guess"
-}
-$shippers = @($processes | Where-Object { $_ -match $shipperPattern })
-if ($shippers.Count -gt 0 -and $otherEdr.Count -eq 0) {
-    Add-Signal 2 "Log shipper '$($shippers[0])' present - a log pipeline exists, so a SOC exists"
-}
+# ============================================================================
+# 1. Endpoint protection
+# ============================================================================
+Write-Section '1. Endpoint protection'
 
-if ($avProducts.Count -gt 0) {
-    Add-Signal 1 "Registered AV product(s): $($avProducts -join ', ')"
+foreach ($p in $procs) {
+    Write-Finding ("process {0} (pid {1}) - {2}" -f $p.Name, $p.ProcessId, $p.ExecutablePath)
+}
+if ($procs.Count -eq 0) { Write-Note 'no known security-product processes running (pattern list is in $edrProcessPattern)' }
+
+foreach ($s in $svcs) {
+    Write-Finding ("service {0}: {1}, start {2}, runs as {3}" -f $s.Name, $s.State, $s.StartMode, $s.StartName)
+    Write-Finding ("    binary: $($s.PathName)")
 }
 
-# -------------------------- evidence: Defender posture ----------------------
-if ($mp) {
-    if ($mp.RealTimeProtectionEnabled)     { Add-Signal 2 "Defender RealTimeProtectionEnabled = True" }
-    else                                   { Add-Signal -1 "Defender present but RTP is OFF - audit/disabled posture" }
-    if ($mp.BehaviorMonitorEnabled)        { Add-Signal 1 "Defender BehaviorMonitorEnabled = True" }
-    if ($mp.NISEnabled)                    { Add-Signal 1 "Defender NISEnabled = True (network inspection)" }
-    if ($mp.TamperProtected)               { Add-Signal 1 "Defender TamperProtected = True - do not touch the product" }
-    if ($mp.AntivirusSignatureLastUpdated -gt (Get-Date).AddHours(-36)) {
-        Add-Signal 1 "Signatures fresh ($($mp.AntivirusSignatureLastUpdated)) - actively managed fleet"
+# SecurityCenter2 productState decode: pair 2 = real-time, pair 3 = freshness.
+function Show-WscProduct($prod, $kind) {
+    foreach ($p in $prod) {
+        $hx  = '{0:x6}' -f ([int]$p.productState)
+        $rt  = $hx.Substring(2, 2)
+        $utd = $hx.Substring(4, 2)
+        $rtTxt  = switch ($rt)  { '00' { 'real-time ON' } '01' { 'EXPIRED' } '10' { 'real-time OFF / snoozed' } default { "0x$rt" } }
+        $utdTxt = switch ($utd) { '00' { 'signatures up to date' } '10' { 'signatures OUT OF DATE' } default { "0x$utd" } }
+        Write-Finding ("{0}: {1} [{2}; {3}] (raw productState 0x{4})" -f $kind, $p.displayName, $rtTxt, $utdTxt, $hx)
+        Write-Finding ("    exe: $($p.pathToSignedProductExe)")
     }
 }
-elseif ($avProducts.Count -gt 0) {
-    Add-Signal 0 "Get-MpComputerStatus unavailable (non-Defender AV or no access); Defender posture unknown"
+Show-WscProduct $avProducts 'AV'
+Show-WscProduct $asProducts 'Anti-spyware'
+Show-WscProduct $fwProducts 'Firewall'
+if ($avProducts.Count -eq 0 -and $asProducts.Count -eq 0 -and $fwProducts.Count -eq 0) {
+    Write-Note 'nothing registered in SecurityCenter2'
 }
 
-if ($processes.Count -eq 0 -and $avProducts.Count -eq 0) {
-    Add-Signal -2 "No security product processes and nothing registered in SecurityCenter2"
+if ($mp) {
+    Write-Finding ("Defender AM service v{0}, AV engine v{1}, NIS v{2}" -f $mp.AMServiceVersion, $mp.AntivirusVersion, $mp.NISEngineVersion)
+    Write-Finding ("RTP=$($mp.RealTimeProtectionEnabled) BehaviorMonitor=$($mp.BehaviorMonitorEnabled) NIS=$($mp.NISEnabled) OnAccess=$($mp.OnAccessProtectionEnabled) Tamper=$($mp.TamperProtected)")
+    Write-Finding ("definitions: AV $($mp.AntivirusSignatureLastUpdated) | NIS $($mp.NISSignatureLastUpdated) | quick scan $($mp.QuickScanEndTime)")
+    Write-Finding ("Defender state: $($mp.AMRunningMode)  (Normal = active, Passive = another AV primary, SxS passive = secondary, EDR = MDE block mode)")
 }
 
-# ---------------------- evidence: credential protection ---------------------
-$lsa       = Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa'
-$lsaCfg    = Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa' -Name LsaCfgFlags
-$runAsPPL  = $lsa.RunAsPPL
-$cgFlags   = if ($lsaCfg) { [int]$lsaCfg.LsaCfgFlags } else { $null }
+if ($mpPref) {
+    if ($mpPref.DisableRealtimeMonitoring)            { Write-Finding '!! Real-time protection DISABLED via policy' }
+    if ($mpPref.DisableBehaviorMonitoring)            { Write-Finding '!! Behavior monitoring DISABLED via policy' }
+    if ($mpPref.DisableScriptScanning)                { Write-Finding '!! Script scanning DISABLED via policy' }
+    if ($mpPref.DisableArchiveScanning)               { Write-Finding 'Archive scanning disabled (default off - noting only)' }
+    if ($mpPref.PUAProtection -eq 1)                  { Write-Finding 'PUA protection enabled' }
+    if ($mpPref.EnableNetworkProtection -ne 0)        { Write-Finding ("Network Protection: {0} (0 default, 1 audit, 2 block)" -f $mpPref.EnableNetworkProtection) }
+    if ($mpPref.EnableControlledFolderAccess -ne 0)   { Write-Finding ("Controlled Folder Access: {0}" -f $mpPref.EnableControlledFolderAccess) }
+    if ($mpPref.MAPSReporting)                        { Write-Finding "MAPS/cloud reporting: $($mpPref.MAPSReporting) (0 off, 1 basic, 2 advanced)"
+        Write-Finding "Sample submission consent: $($mpPref.SubmitSamplesConsent)" }
+    if ($mpPref.CloudBlockLevel)                      { Write-Finding "Cloud block level: $($mpPref.CloudBlockLevel), extended timeout $($mpPref.CloudExtendedTimeout)s" }
+    # Exclusions: high-value both for planning and as a compromise smell.
+    foreach ($x in $mpPref.ExclusionPath)     { Write-Finding "!! exclusion (path): $x" }
+    foreach ($x in $mpPref.ExclusionProcess)  { Write-Finding "!! exclusion (process): $x" }
+    foreach ($x in $mpPref.ExclusionExtension){ Write-Finding "!! exclusion (extension): $x" }
+    foreach ($x in $mpPref.ExclusionIpAddress){ Write-Finding "!! exclusion (ip): $x" }
+    # ASR rules: parallel id/action arrays. 0 off, 1 block, 2 audit, 6 warn.
+    $asrOn = @()
+    for ($i = 0; $i -lt $mpPref.AttackSurfaceReductionRules_Ids.Count; $i++) {
+        $action = $mpPref.AttackSurfaceReductionRules_Actions[$i]
+        if ($action -ne 0) { $asrOn += ("{0} = {1}" -f $mpPref.AttackSurfaceReductionRules_Ids[$i], @(switch ($action) { 1 {'block'} 2 {'audit'} 6 {'warn'} default {$action} })) }
+    }
+    if ($asrOn.Count -gt 0) { Write-Finding "ASR rules active ($($asrOn.Count)): $($asrOn -join '; ')" }
+    else { Write-Note 'no ASR rules configured' }
+}
 
-$dg = $null
+# Defender detection history on this box: the loudest mid-incident smell.
 try {
-    $dg = Get-CimInstance -Namespace root\Microsoft\Windows\DeviceGuard -ClassName Win32_DeviceGuard
-} catch { $dg = $null }
+    $threats = @(Get-MpThreat)
+    if ($threats.Count -gt 0) {
+        foreach ($t in $threats) { Write-Finding "!! active/known threat: $($t.ThreatName) (id $($t.ThreatID), severity $($t.SeverityID))" }
+    }
+    $detections = @(Get-MpThreatDetection | Sort-Object InitialDetectionTime -Descending | Select-Object -First 5)
+    foreach ($d in $detections) {
+        Write-Finding ("detection {0}: action={1} success={2} time={3}" -f $d.ThreatID, $d.ActionID, $d.ActionSuccess, $d.InitialDetectionTime)
+        foreach ($r in @($d.Resources | Select-Object -First 3)) { Write-Finding "    resource: $r" }
+    }
+    if ($threats.Count -eq 0 -and $detections.Count -eq 0) { Write-Note 'no Defender threat history on this box' }
+} catch { Write-Note 'Defender threat history not readable' }
 
-$secServicesRunning = @()
-$vbsRunning = $false
+# ============================================================================
+# 2. Credential & platform protection
+# ============================================================================
+Write-Section '2. Credential & platform protection'
+
+Show-RegValues 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa' 'LSA'
+$pplBoot = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa' -Name RunAsPPLBoot).RunAsPPLBoot
+if ($pplBoot -eq 1) { Write-Finding 'RunAsPPLBoot = 1 (PPL survives safe mode)' }
+
 if ($dg) {
-    $secServicesRunning = @($dg.SecurityServicesRunning)
-    $vbsRunning = ($dg.VirtualizationBasedSecurityStatus -eq 2)
+    Write-Finding ("VBS status: $($dg.VirtualizationBasedSecurityStatus) (0 off, 1 configured-not-running, 2 running)")
+    Write-Finding ("security services configured: {0} | running: {1}" -f ($dg.SecurityServicesConfigured -join ','), ($dg.SecurityServicesRunning -join ','))
+    Write-Finding ("  (1 = Credential Guard, 2 = HVCI per the course notes; verify on lab builds)")
+    $ci = [int]$dg.CodeIntegrityPolicyEnforcementStatus
+    $um = [int]$dg.UsermodeCodeIntegrityPolicyEnforcementStatus
+    Write-Finding ("WDAC kernel CI enforcement: {0} | user-mode (UMCI): {1} (0 off, 1 audit, 2 enforce)" -f $ci, $um)
+}
+else { Write-Note 'DeviceGuard namespace not readable (older OS or no access)' }
+
+# Dynamic walk: any LSA values mentioning audit (credential-dump detection).
+$lsaKey = Get-Item 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa'
+foreach ($p in @($lsaKey.Property)) {
+    if ($p -match 'Audit') { Write-Finding "LSA audit knob: $p = $((Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa' -Name $p).$p)" }
 }
 
-# Cross-check: LsaCfgFlags >= 1 or SecurityServicesRunning containing 2 both
-# indicate Credential Guard (2 matches the course notes; raw values printed).
-$credGuardRunning = ($cgFlags -ge 1) -or ($secServicesRunning -contains 2)
+Show-RegValues 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\WDigest' 'WDigest'
+Write-Note 'WDigest UseLogonCredential = 1 means cleartext credentials in memory (KB2871997 undone)'
 
-if ($runAsPPL -eq 1)   { Add-Signal 2 "RunAsPPL = 1 - LSASS runs as protected process" }
-if ($credGuardRunning) {
-    Add-Signal 3 "Credential Guard active (LsaCfgFlags=$cgFlags SecurityServicesRunning=$($secServicesRunning -join ',')) - shift to tickets/tokens, not hashes"
-}
-elseif ($vbsRunning)   { Add-Signal 1 "VBS running without Credential Guard (SecurityServicesRunning=$($secServicesRunning -join ','))" }
-if (-not $lsa)         { Add-Signal 0 "LSA key not visible (not elevated?) - PPL/CG state unknown, scored neutral" }
+Show-RegValues 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' 'Winlogon'
+$cached = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' -Name CachedLogonsCount).CachedLogonsCount
+if ($null -ne $cached) { Write-Finding "cached logons allowed: $cached (0 = no cached credentials)" }
 
-# ------------------------ evidence: logging and policy ----------------------
-$languageMode = $ExecutionContext.SessionState.LanguageMode
-if ($languageMode -eq 'ConstrainedLanguage') {
-    Add-Signal 3 "PowerShell LanguageMode = ConstrainedLanguage - tooling menu shrinks hard"
+$krb = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\Kerberos\Parameters' -Name SupportedEncryptionTypes
+if ($krb) {
+    $et = [int]$krb.SupportedEncryptionTypes
+    $algos = @()
+    if ($et -band 0x1)  { $algos += 'DES' }
+    if ($et -band 0x4)  { $algos += 'RC4' }
+    if ($et -band 0x8)  { $algos += 'AES128' }
+    if ($et -band 0x10) { $algos += 'AES256' }
+    Write-Finding "Kerberos SupportedEncryptionTypes = 0x{0:x} ({1})" -f $et, ($algos -join '+')
+    if (($et -band 0x4) -and -not ($et -band 0x10)) { Write-Finding '!! RC4 permitted without AES256 (roast-friendly crypto policy)' }
 }
-elseif ($languageMode -eq 'FullLanguage') {
-    Add-Signal 0 "LanguageMode = FullLanguage"
-}
+else { Write-Note 'Kerberos SupportedEncryptionTypes not set (default permits RC4)' }
 
-$sbl = Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging'
-if ($sbl.EnableScriptBlockLogging -eq 1) {
-    Add-Signal 2 "EnableScriptBlockLogging = 1 - every command string reaches the SIEM"
-}
-$mod = Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ModuleLogging'
-if ($mod.EnableModuleLogging -eq 1) {
-    Add-Signal 1 "EnableModuleLogging = 1"
-}
-$trn = Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription'
-if ($trn.EnableTranscripting -eq 1) {
-    Add-Signal 1 "PowerShell Transcription enabled - script contents are being written to disk"
-}
+# LAPS posture: legacy LAPS CSE and Windows LAPS policy.
+$lapsLegacy = Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft Services\AdmPwd' -Name AdmPwdEnabled
+if ($lapsLegacy -and $lapsLegacy.AdmPwdEnabled -eq 1) { Write-Finding 'legacy LAPS client installed and enabled' }
+$lapsNew = Get-Item 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\LAPS'
+if ($lapsNew -and $lapsNew.Property.Count -gt 0) { Write-Finding "Windows LAPS policy keys present: $($lapsNew.Property -join ', ')" }
 
-# AppLocker: cmdlet first (needs module/elevation), registry fallback.
-$appLockerXml = $null
-try { $appLockerXml = Get-AppLockerPolicy -Effective -Xml } catch { $appLockerXml = $null }
-if ($appLockerXml -match 'EnforcementMode="Enabled"') {
-    Add-Signal 3 "AppLocker enforce-mode rules present - dropper menu is constrained"
-}
-elseif ($appLockerXml -match 'EnforcementMode="AuditOnly"') {
-    Add-Signal 1 "AppLocker audit-only - assume the rules are being read"
-}
-elseif (Test-Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\SrpV2') {
-    Add-Signal 1 "SrpV2 policy keys exist (AppLocker/WDAC via policy); effective mode unreadable without the module"
+# Platform: TPM, Secure Boot, BitLocker.
+$tpm = Get-CimInstance Win32_Tpm
+if ($tpm) { Write-Finding ("TPM: present, spec {0}, ready {1}" -f $tpm.SpecVersion, $tpm.IsReady_InitialValue) }
+else { Write-Note 'TPM not readable (absent, or no admin)' }
+try {
+    $sb = Confirm-SecureBootUEFI
+    Write-Finding "Secure Boot: $sb"
+} catch { Write-Note 'Secure Boot check unavailable (legacy BIOS or no access)' }
+$bl = Get-CimInstance -Namespace 'root/cimv2/Security/MicrosoftVolumeEncryption' -ClassName Win32_EncryptableVolume -Filter "DriveLetter='C:'"
+if ($bl) {
+    $blTxt = switch ([int]$bl.ProtectionStatus) { 0 {'NOT encrypted'} 1 {'encrypted'} 2 {'encryption in progress'} default {$bl.ProtectionStatus} }
+    Write-Finding "BitLocker C: $blTxt"
 }
 
-# WDAC: enforced code-integrity policies on disk.
-$wdacActive = (Test-Path 'C:\Windows\System32\CodeIntegrity\CiPolicies\Active') -or
-              (Test-Path 'C:\Windows\System32\CodeIntegrity\SiPolicy.p7b')
-if ($wdacActive) {
-    Add-Signal 3 "WDAC code-integrity policy present (CiPolicies\Active or SiPolicy.p7b)"
-}
+# ============================================================================
+# 3. Logging & telemetry
+# ============================================================================
+Write-Section '3. Logging & telemetry'
 
-# Sysmon service + driver.
-$sysmonSvc = @(Get-CimInstance Win32_Service | Where-Object { $_.Name -match '^Sysmon' })
-if ($sysmonSvc.Count -gt 0 -and $sysmonSvc[0].State -eq 'Running') {
-    Add-Signal 2 "Sysmon service '$($sysmonSvc[0].Name)' running - process/network telemetry likely flowing"
+Write-Finding ("PowerShell LanguageMode: $ExecutionContext.SessionState.LanguageMode")
+Show-RegValues 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell' 'PowerShell policy'
+Show-RegValues 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging' 'ScriptBlock logging'
+Show-RegValues 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ModuleLogging' 'Module logging'
+Show-RegValues 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription' 'Transcription'
+Show-RegValues 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\UpdatableHelp' 'UpdatableHelp'
+
+# WinRM / PS remoting.
+$winrm = Get-CimInstance Win32_Service -Filter "Name='WinRM'"
+if ($winrm) {
+    Write-Finding ("WinRM service: $($winrm.State), start $($winrm.StartMode)")
+    if ($winrm.State -eq 'Running') {
+        Get-ChildItem WSMan:\localhost\Listener | ForEach-Object {
+            $addr = ($_ | Get-ChildItem | Where-Object Name -eq 'Address').Value
+            $tran = ($_ | Get-ChildItem | Where-Object Name -eq 'Transport').Value
+            $port = ($_ | Get-ChildItem | Where-Object Name -eq 'Port').Value
+            Write-Finding "  WinRM listener: $addr/$tran :$port"
+        }
+    }
+}
+else { Write-Note 'WinRM service not present' }
+
+# Event log inventory: the big enabled logs, plus the ones that matter here.
+$logs = @(Get-WinEvent -ListLog * -ErrorAction SilentlyContinue | Where-Object { $_.IsEnabled -and $_.FileSize -gt 0 } | Sort-Object FileSize -Descending)
+foreach ($l in ($logs | Select-Object -First 20)) {
+    Write-Finding ("log {0}: {1} MB now, max {2} MB, mode {3}" -f $l.LogName, [math]::Round($l.FileSize/1MB,1), [math]::Round($l.MaximumSizeInBytes/1MB,0), $l.LogMode)
+}
+foreach ($name in 'Security','Microsoft-Windows-PowerShell/Operational','Microsoft-Windows-WMI-Activity/Operational','Microsoft-Windows-Windows Defender/Operational','Microsoft-Windows-Sysmon/Operational','Microsoft-Windows-TaskScheduler/Operational') {
+    $l = $logs | Where-Object LogName -eq $name
+    if ($l) { Write-Finding ("watch log {0}: {1} MB, max {2} MB, mode {3}" -f $l.LogName, [math]::Round($l.FileSize/1MB,1), [math]::Round($l.MaximumSizeInBytes/1MB,0), $l.LogMode) }
+}
+Write-Note "top 20 enabled logs by size shown; Security-log mode 'Retain' or tiny max size shortens your local forensic shadow"
+
+Show-RegValues 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\EventLog\EventForwarding\SubscriptionManager' 'WEF'
+$wefSvc = Get-CimInstance Win32_Service | Where-Object { $_.Name -match 'WecSvc|Windows Event Collector' } | Select-Object -First 1
+if ($wefSvc) { Write-Finding "collector service present locally (this box forwards FROM others too?): $($wefSvc.State)" }
+
+# Sysmon, with binary version since config requires executing it.
+$sysmonSvc = Get-CimInstance Win32_Service | Where-Object { $_.Name -match '^Sysmon' } | Select-Object -First 1
+if ($sysmonSvc) {
+    $bin = $sysmonSvc.PathName -replace '^"|"$',''
+    $ver = (Get-Item $bin).VersionInfo.FileVersion
+    Write-Finding "Sysmon service $($sysmonSvc.Name): $($sysmonSvc.State), binary $bin (v$ver)"
+    Write-Note 'config contents require running Sysmon -c; binary version at least dates the rule-schema era'
 }
 $sysmonDrv = Get-CimInstance Win32_SystemDriver -Filter "Name='SysmonDrv'"
-if ($sysmonDrv -and $sysmonDrv.State -eq 'Running') {
-    Add-Signal 1 "SysmonDrv kernel driver loaded"
+if ($sysmonDrv) { Write-Finding "SysmonDrv driver: $($sysmonDrv.State)" }
+
+# Effective audit policy. The ONE justified spawn: no in-process equivalent.
+Write-Finding 'audit policy (auditpol /get):'
+try {
+    $audit = @(auditpol.exe /get /category:* /r 2>$null | ConvertFrom-Csv | Where-Object { $_.'Inclusion Setting' -ne 'No Auditing' })
+    if ($audit.Count -gt 0) {
+        foreach ($a in $audit) { Write-Finding ("    {0} = {1}" -f $a.Subcategory, $a.'Inclusion Setting') }
+    }
+    else { Write-Note 'audit policy: everything at default (No Audging)' }
+}
+catch { Write-Note 'auditpol not available' }
+
+# What GPOs actually applied last cycle (names only).
+$gpoHist = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\History' |
+           Where-Object { $_.GetValue('DisplayName') }
+foreach ($g in $gpoHist) {
+    Write-Finding ("applied GPO: {0} (link '{1}')" -f $g.GetValue('DisplayName'), $g.GetValue('Link'))
+}
+if (-not $gpoHist) { Write-Note 'no GPO history (workgroup, or never processed policy)' }
+
+# ============================================================================
+# 4. Policy & hardening
+# ============================================================================
+Write-Section '4. Policy & hardening'
+
+# AppLocker: per-collection modes and rule counts when the module exists.
+$appLockerXml = $null
+try { $appLockerXml = Get-AppLockerPolicy -Effective -Xml } catch { $appLockerXml = $null }
+if ($appLockerXml) {
+    try {
+        [xml]$al = $appLockerXml
+        foreach ($rc in $al.AppLockerPolicy.RuleCollection) {
+            $ruleCount = @($rc.FilePathRule + $rc.FileHashRule + $rc.FilePublisherRule + $rc.MsiRule + $rc.ScriptRule + $rc.DllRule + $rc.AppxRule).Count
+            Write-Finding ("AppLocker {0}: {1} ({2} rules)" -f $rc.Type, $rc.EnforcementMode, $ruleCount)
+        }
+    } catch { Write-Finding "AppLocker effective XML retrieved but unparsable; first 200 chars: $($appLockerXml.Substring(0,200))" }
+}
+elseif (Test-Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\SrpV2') {
+    foreach ($sub in (Get-ChildItem 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\SrpV2').PSChildName) {
+        Write-Finding "SrpV2 policy area present: $sub (effective mode needs the AppLocker module to decode)"
+    }
+}
+else { Write-Note 'no AppLocker/WDAC GPO keys (SrpV2 absent)' }
+
+if ($dg) {
+    $cip = @(Get-ChildItem 'C:\Windows\System32\CodeIntegrity\CiPolicies\Active' -Filter *.cip)
+    foreach ($f in $cip) { Write-Finding "WDAC policy file: $($f.Name) ({0} KB, {1})" -f [math]::Round($f.Length/1KB,1), $f.LastWriteTime }
+}
+$ciPol = Get-Item 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\CodeIntegrity'
+if ($ciPol) { foreach ($p in $ciPol.Property) { Write-Finding "CodeIntegrity policy key: $p = $($ciPol.GetValue($p))" } }
+
+# UAC posture.
+$uac = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System'
+Write-Finding ("UAC: EnableLUA=$($uac.EnableLUA) ConsentPromptBehaviorAdmin=$($uac.ConsentPromptBehaviorAdmin) PromptOnSecureDesktop=$($uac.PromptOnSecureDesktop)")
+$latfp = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' -Name LocalAccountTokenFilterPolicy).LocalAccountTokenFilterPolicy
+if ($latfp -eq 1) { Write-Finding 'LocalAccountTokenFilterPolicy = 1 (UAC remote restrictions disabled - remote local-admin logons are full tokens)' }
+
+# Process mitigations (system-wide): print every switch that is ON.
+try {
+    $mit = Get-ProcessMitigation -System
+    $on = @()
+    foreach ($prop in $mit.PSObject.Properties) {
+        if ($prop.Value -is [bool] -and $prop.Value) { $on += $prop.Name }
+        elseif ($prop.Value -is [string] -and $prop.Value -notin @('OFF','NotSet','False','') -and $prop.Name -notmatch 'PS') { $on += "$($prop.Name)=$($prop.Value)" }
+    }
+    if ($on.Count -gt 0) { Write-Finding "system exploit mitigations ON: $($on -join ', ')" }
+    else { Write-Note 'no system-wide exploit mitigations enabled' }
+} catch { Write-Note 'Get-ProcessMitigation unavailable on this build' }
+
+# Firewall profiles and their logging.
+$fwProfiles = @(Get-NetFirewallProfile)
+foreach ($p in $fwProfiles) {
+    Write-Finding ("firewall [{0}] enabled={1} inbound={2} log=allowed:{3} blocked:{4} max:{5}MB file:{6}" -f $p.Name, $p.Enabled, $p.DefaultInboundAction, $p.LogAllowed, $p.LogBlocked, [math]::Round($p.LogMaxSizeKilobytes/1024,0), $p.LogFileName)
+}
+if ($fwProfiles.Count -gt 0 -and -not ($fwProfiles | Where-Object Enabled).Count) { Write-Finding '!! all firewall profiles DISABLED' }
+
+Show-RegValues 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' 'SmartScreen policy'
+$smartApp = (Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' -Name EnableSmartScreen).EnableSmartScreen
+if ($smartApp -eq 0) { Write-Finding 'SmartScreen explicitly disabled by policy' }
+
+# SMB posture.
+$srvParams = Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters'
+Write-Finding ("SMB server: SMB1=$($srvParams.SMB1) require-signing=$($srvParams.RequireSecuritySignature) enable-signing=$($srvParams.EnableSecuritySignature) (SMB1 absent = default, usually off on Win10+)")
+$wkParams = Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters'
+Write-Finding ("SMB client: require-signing=$($wkParams.RequireSecuritySignature)")
+
+# Name-resolution protocols (poisoning surface, both directions).
+$llmnr = (Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient' -Name EnableMulticast).EnableMulticast
+Write-Finding ("LLMNR: $(if ($llmnr -eq 0) {'disabled by policy'} elseif ($null -eq $llmnr) {'default (ENABLED)'} else {"value $llmnr"})")
+$mdns = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters' -Name EnableMDNS).EnableMDNS
+Write-Finding ("mDNS: $(if ($mdns -eq 0) {'disabled'} elseif ($null -eq $mdns) {'default (enabled)'} else {"value $mdns"})")
+foreach ($if in (Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\NetBT\Parameters\Interfaces')) {
+    $opt = $if.GetValue('NetbiosOptions')
+    if ($null -ne $opt) { Write-Finding ("NetBIOS on $($if.PSChildName): $(switch ($opt) { 0 {'default (NetBIOS on if DHCP says so)'} 1 {'ENABLED'} 2 {'disabled'} })") }
 }
 
-# WEF subscription: the line that upgrades every cleanup plan.
-$wef = Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\EventLog\EventForwarding\SubscriptionManager'
-if ($wef.SubscriptionManager) {
-    Add-Signal 3 "WEF subscription configured: $($wef.SubscriptionManager) - logs already left the box"
-}
+# ============================================================================
+# 5. Egress & network
+# ============================================================================
+Write-Section '5. Egress & network'
 
-# Security log budget: small logs overwrite your activity quickly.
-$secLog = Get-WinEvent -ListLog Security
-if ($secLog -and $secLog.MaximumSizeInBytes -lt 20MB) {
-    Add-Signal 1 "Security log capped at $([math]::Round($secLog.MaximumSizeInBytes / 1MB, 0)) MB (mode $($secLog.LogMode)) - short local retention"
-}
+Show-RegValues 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' 'user proxy'
+Show-RegValues 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings' 'machine proxy'
 
-# ------------------------------ evidence: egress ----------------------------
-$inet = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings'
-$hasUserProxy = ($inet.ProxyEnable -eq 1) -or ($inet.AutoConfigURL)
-if ($inet.AutoConfigURL)     { Add-Signal 1 "WPAD/PAC in use: $($inet.AutoConfigURL) - browser-shaped traffic is steered" }
-if ($inet.ProxyEnable -eq 1) { Add-Signal 1 "Userland proxy: $($inet.ProxyServer) - beacon needs proxy-aware comms" }
-
-# winhttp machine proxy, parsed from the registry binary instead of netsh.exe.
-$winhttp = 'direct'
+# winhttp binary parse instead of spawning netsh.exe.
 $wh = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\Connections' -Name WinHttpSettings
 if ($wh -and $wh.WinHttpSettings) {
     $bytes = [byte[]]$wh.WinHttpSettings
     if ($bytes.Length -gt 8) {
-        $candidate = ([System.Text.Encoding]::ASCII.GetString($bytes, 8, $bytes.Length - 8) -split "`0")[0]
-        if ($candidate) {
-            $winhttp = $candidate
-            Add-Signal 1 "winhttp machine proxy: $candidate"
+        $proxy = ([System.Text.Encoding]::ASCII.GetString($bytes, 8, $bytes.Length - 8) -split "`0")[0]
+        if ($proxy) { Write-Finding "winhttp machine proxy: $proxy" }
+        else { Write-Note 'winhttp: direct (no proxy string in the binary)' }
+    }
+    else { Write-Note 'winhttp: direct (header only)' }
+}
+
+foreach ($d in (Get-DnsClientServerAddress -AddressFamily IPv4 | Where-Object { $_.ServerAddresses })) {
+    Write-Finding ("DNS v4 on {0}: {1}" -f $d.InterfaceAlias, ($d.ServerAddresses -join ', '))
+}
+$globalDns = Get-DnsClientGlobalSetting
+if ($globalDns) { Write-Finding "DNS suffix search list: $($globalDns.SuffixSearchList -join ', ')" }
+try {
+    foreach ($d in (Get-DnsClientDohServerAddress)) { Write-Finding "DoH server: $($d.ServerAddress) template=$($d.DohTemplate) auto-upgrade=$($d.AutoUpgrade)" }
+} catch { }
+
+$v6 = @(Get-NetIPAddress -AddressFamily IPv6 | Where-Object { $_.AddressState -eq 'Preferred' })
+if ($v6.Count -gt 0) { Write-Finding "live IPv6: $(($v6 | ForEach-Object IPAddress) -join ', ') - often less inspected" }
+foreach ($t in (Get-NetAdapter | Where-Object { $_.Name -match 'Teredo|ISATAP|6to4' -and $_.Status -eq 'Up' })) {
+    Write-Finding "transition adapter up: $($t.Name) - tunnel surface worth a look"
+}
+
+# Winsock catalog: layered providers and filters.
+$lsp = Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\WinSock2\Parameters\NameSpace_Catalog5\CatalogEntries'
+foreach ($e in $lsp) { Write-Finding ("winsock namespace provider: {0}" -f $e.GetValue('Description')) }
+$lsp2 = Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\WinSock2\Parameters\Protocol_Catalog9\CatalogEntries'
+foreach ($e in $lsp2) {
+    $name = $e.GetValue('PackedCatalogItem')  # binary blob; provider name not directly readable here
+}
+Write-Note "protocol catalog has $($lsp2.Count) entries (count only; names live in a binary blob)"
+
+# Root CAs that are NOT well-known public CAs: interception candidates.
+$roots = @(Get-ChildItem Cert:\LocalMachine\Root)
+$unusual = @($roots | Where-Object { $_.Subject -notmatch $publicCaPattern })
+foreach ($c in $unusual) { Write-Finding "non-standard root CA: $($c.Subject) (thumb $($c.Thumbprint.Substring(0,8))...)" }
+if ($unusual.Count -eq 0) { Write-Note "all $($roots.Count) root CAs match the well-known public list" }
+
+# ============================================================================
+# 6. Management plane & incident smells
+# ============================================================================
+Write-Section '6. Management plane & incident smells'
+
+$ccm = Get-CimInstance Win32_Service -Filter "Name='CcmExec'"
+if ($ccm) {
+    Write-Finding "SCCM client running (CcmExec)"
+    $site = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\SMS\Mobile Client' -Name SMSCurrentAssignedSite).SMSCurrentAssignedSite
+    if ($site) { Write-Finding "SCCM assigned site: $site" }
+}
+$mdm = @(Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Enrollments' | Where-Object { $_.GetValue('DiscoveryServiceFullName') -or $_.GetValue('EnrollmentType') })
+foreach ($m in $mdm) {
+    Write-Finding ("enrollment: type {0} at {1} (UPN {2})" -f $m.GetValue('EnrollmentType'), $m.GetValue('DiscoveryServiceFullName'), $m.GetValue('UPN'))
+}
+$joinInfo = Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Control\CloudDomainJoin\JoinInfo'
+foreach ($j in $joinInfo) {
+    Write-Finding ("Entra join: tenant {0}, idp {1}, user {2}" -f $j.GetValue('TenantId'), $j.GetValue('IdpDomain'), $j.GetValue('UserEmail'))
+}
+if (-not $mdm -and -not $joinInfo) { Write-Note 'no MDM enrollment, no Entra join' }
+
+# Recent security-software installs from the uninstall registry (more
+# reliable than directory timestamps).
+$uninstall = @(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
+                'HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' |
+                Where-Object { $_.DisplayName -match $secDirPattern })
+foreach ($u in $uninstall) {
+    Write-Finding ("installed security product: {0} {1} (installed {2})" -f $u.DisplayName, $u.DisplayVersion, $u.InstallDate)
+}
+
+$pfNew = @(Get-ChildItem 'C:\Program Files', 'C:\Program Files (x86)' -Directory | Where-Object { $_.CreationTime -gt (Get-Date).AddDays(-14) })
+foreach ($d in $pfNew) { Write-Finding ("new Program Files dir (<14d): {0} ({1})" -f $d.FullName, $d.CreationTime.ToString('yyyy-MM-dd')) }
+if ($pfNew.Count -eq 0) { Write-Note 'no Program Files directories created in the last 14 days' }
+
+foreach ($t in (Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft*' })) {
+    $info = Get-ScheduledTaskInfo $t
+    if ($info.Date -gt (Get-Date).AddDays(-14)) {
+        $exe = $t.Actions[0].Execute
+        if ($exe -match $secDirPattern) {
+            Write-Finding ("task created <14d (security tool): {0}{1} -> {2} {3} (runas {4})" -f $t.TaskPath, $t.TaskName, $exe, $t.Actions[0].Arguments, $t.Principal.UserId)
         }
     }
 }
 
-$tlsCa = @(Get-ChildItem Cert:\LocalMachine\Root | Where-Object { $_.Subject -match $tlsCaPattern } | Select-Object -ExpandProperty Subject)
-if ($tlsCa.Count -gt 0) {
-    Add-Signal 2 "Corporate issuing CA in root store: $($tlsCa[0]) - TLS interception likely; C2 is visible to inspection"
-}
+$mdeActive = @(Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'SenseIR|SenseCNR' } | Select-Object -ExpandProperty Name)
+foreach ($m in $mdeActive) { Write-Finding "!! MDE investigation process running: $m - active IR on this host" }
 
-$v6 = @(Get-NetIPAddress -AddressFamily IPv6 | Where-Object { $_.AddressState -eq 'Preferred' })
-if ($v6.Count -gt 0) {
-    Add-Signal 0 "Live IPv6 present ($($v6[0].IPAddress)) - often less inspected; noted, not committed"
-}
-
-if (-not $hasUserProxy -and $winhttp -eq 'direct' -and $tlsCa.Count -eq 0) {
-    Add-Signal -1 "Fully direct egress: no proxy, no PAC, no TLS-inspection CA"
-}
-
-# -------------------------- evidence: mid-incident --------------------------
-$pfDirs = @(Get-ChildItem 'C:\Program Files', 'C:\Program Files (x86)' -Directory |
-            Where-Object { $_.CreationTime -gt (Get-Date).AddDays(-14) })
-$newSec = @($pfDirs | Where-Object { $_.Name -match $secDirPattern })
-if ($newSec.Count -gt 0) {
-    Add-Signal 2 "Security software installed within 14 days: $($newSec[0].Name) ($($newSec[0].CreationTime.ToString('yyyy-MM-dd'))) - environment may be mid-response"
-}
-$huntAgents = @($services | Where-Object { $_ -match $huntPattern })
-if ($huntAgents.Count -gt 0) {
-    Add-Signal 2 "Threat-hunt agent present: $($huntAgents[0]) - a hunt program exists here"
-}
-
-# ---------------------- optional: one justified reachability -----------------
 if ($Redirector) {
     $tnc = Test-NetConnection -ComputerName $Redirector -Port 443
-    if ($tnc.TcpTestSucceeded) {
-        Add-Signal 0 "Redirector $Redirector :443 reachable - channel alive before it is needed"
-    }
-    else {
-        Add-Signal 0 "Redirector $Redirector :443 NOT reachable - find out now, not mid-tasking"
-    }
+    Write-Finding ("redirector {0}:443 reachable: {1}" -f $Redirector, $tnc.TcpTestSucceeded)
 }
 
-# ---------------------------------- scoring ----------------------------------
-$rawScore = $script:score
-$rating   = [Math]::Max(1, [Math]::Min(10, $rawScore + 5))   # shift so "no evidence" = 5 = moderate
+# ============================================================================
+# 7. Patch state
+# ============================================================================
+Write-Section '7. Patch state'
 
-$band = switch ($rating) {
-    { $_ -le 3 } { 'Legacy / audit'; break }
-    { $_ -le 6 } { 'Moderate'; break }
-    default      { 'Watched' }
-}
+$cur = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
+Write-Finding ("OS: $($os.Caption) build $($cur.CurrentBuild).$($cur.UBR), installed $($os.InstallDate), last boot $($os.LastBootUpTime)")
+$hotfixes = @(Get-CimInstance Win32_QuickFixEngineering | Sort-Object InstalledOn -Descending | Select-Object -First 5)
+foreach ($h in $hotfixes) { Write-Finding ("hotfix {0} installed {1}" -f $h.HotFixID, $h.InstalledOn) }
+Write-Note 'compare CurrentBuild.UBR against the vendor servicing timeline to date the patch gap - that expectation-setter feeds Phase 4'
 
-$color = if ($rating -le 3) { 'Green' } elseif ($rating -le 6) { 'Yellow' } else { 'Red' }
+# ============================================================================
+# Gate 1: fill in one line (the notes' decision gate - YOUR judgment)
+# ============================================================================
+Write-Section 'Gate 1 - fill in one line (student judgment; script does not score)'
 
-# ----------------- Gate 1 field summary (the notes' fill-ins) ----------------
-$edrGuess = if ($mdePresent) { 'Defender+MDE (block-guess)' }
-            elseif ($otherEdr.Count -gt 0) { "$($otherEdr[0]) (block-guess)" }
-            elseif ($avProducts.Count -gt 0) { "$($avProducts[0]) (mode unknown)" }
+$edrGuess = if ($svcs.Name -contains 'Sense' -or ($procs.Name -match 'MsSense|Sense')) { 'Defender+MDE (block vs audit: GUESS)' }
+            elseif ($procs) { "$($procs[0].Name) (block vs audit: GUESS)" }
+            elseif ($avProducts) { "$($avProducts[0].displayName) (mode unknown)" }
             else { 'none found' }
-$credLine = "PPL $(if ($runAsPPL -eq 1) { 'on' } else { 'off' }) / CG $(if ($credGuardRunning) { 'on' } else { 'off' })"
-$logLine  = "SBL $(if ($sbl.EnableScriptBlockLogging -eq 1) { 'on' } else { 'off' }) / LM $languageMode / AppLocker $(if ($appLockerXml -match 'EnforcementMode=.Enabled.') { 'enforce' } elseif ($appLockerXml -match 'AuditOnly') { 'audit' } else { '-' }) / WDAC $(if ($wdacActive) { 'on' } else { '-' })"
-$sysBits  = @()
-if ($sysmonSvc.Count -gt 0 -and $sysmonSvc[0].State -eq 'Running') { $sysBits += 'svc' }
-if ($sysmonDrv -and $sysmonDrv.State -eq 'Running')               { $sysBits += 'drv' }
-$sysLine  = "Sysmon $(if ($sysBits.Count -gt 0) { $sysBits -join '+' } else { 'none' }) / WEF $(if ($wef.SubscriptionManager) { 'on' } else { 'off' })"
-$egrLine  = if ($tlsCa.Count -gt 0) { "TLS-inspect ($($inet.ProxyServer))" }
-            elseif ($hasUserProxy) { "proxy ($($inet.ProxyServer))" }
-            elseif ($winhttp -ne 'direct') { "winhttp $winhttp" }
-            else { 'direct' }
-$incLine  = if ($mdeActive.Count -gt 0) { "ACTIVE IR ($($mdeActive[0]))" }
-            elseif ($newSec.Count -gt 0) { "recent install ($($newSec[0].Name))" }
-            elseif ($huntAgents.Count -gt 0) { "hunt agent ($($huntAgents[0]))" }
-            else { 'none' }
-
-# ---------------------------------- output -----------------------------------
+Write-Host ("  EDR/XDR: {0}" -f $edrGuess)
+Write-Host ("  LSASS/CredGuard: PPL $(if ((Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa' -Name RunAsPPL).RunAsPPL -eq 1) {'on'} else {'off'}) / CG $(if ($dg -and (($dg.SecurityServicesRunning -contains 2) -or ((Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa' -Name LsaCfgFlags).LsaCfgFlags -ge 1))) {'on'} else {'off'})")
+Write-Host '  Script logging / CLM / AppLocker: (see sections 3-4)'
+Write-Host '  Sysmon + WEF: (see section 3)'
+Write-Host '  Egress: (see section 5)'
+Write-Host '  Incident multiplier: (see section 6)'
 Write-Host ''
-Write-Host '=============================================================='
-Write-Host ("  Threat rating : {0}/10 ({1})" -f $rating, $band) -ForegroundColor $color
-Write-Host '=============================================================='
-Write-Host ("  Raw evidence score: {0}  (positive = watched, negative = legacy/open)" -f $rawScore)
-Write-Host '--------------------------------------------------------------'
-if ($script:reasons.Count -gt 0) {
-    foreach ($r in $script:reasons) { Write-Host "   $r" }
-}
-else {
-    Write-Host '   (no signals collected - unable to determine anything)'
-}
-Write-Host '--------------------------------------------------------------'
-Write-Host '  Gate 1 fields:'
-Write-Host ("    EDR/XDR      : {0}" -f $edrGuess)
-Write-Host ("    LSASS/CredGd : {0}" -f $credLine)
-Write-Host ("    Logging      : {0}" -f $logLine)
-Write-Host ("    Sysmon/WEF   : {0}" -f $sysLine)
-Write-Host ("    Egress       : {0}" -f $egrLine)
-Write-Host ("    Incident x   : {0}" -f $incLine)
-if (-not $isElevated) { Write-Host '    (not elevated: some reads were not visible; missing = neutral, not absent)' }
-Write-Host '--------------------------------------------------------------'
-Write-Host '  Bands: 1-3 Legacy/audit | 4-6 Moderate | 7-10 Watched'
-Write-Host '=============================================================='
+Write-Host '  Threat rating, one line: _______________________________________'
 Write-Host ''
-Write-Host ("THREAT-RATING: {0}/10 ({1})" -f $rating, $band) -ForegroundColor $color
