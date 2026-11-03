@@ -50,7 +50,9 @@ function Invoke-ChunkedUpload {
             if ($read -le 0) { break }
 
             $chunkPath = Join-Path $tmpDir ("chunk_{0:D5}" -f $i)
-            [System.IO.File]::WriteAllBytes($chunkPath, $buffer[0..($read - 1)])
+            $chunkData = New-Object byte[] $read
+            [System.Array]::Copy($buffer, $chunkData, $read)
+            [System.IO.File]::WriteAllBytes($chunkPath, $chunkData)
 
             $attempt = 0
             $ok = $false
