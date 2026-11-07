@@ -189,6 +189,8 @@ else
   echo "SSH key already exists: $SSH_KEY"
 fi
 
+sudo apt purge apache2
+
 # ─── Timezone ──────────────────────────────────────────────────────────────────
 echo "Setting timezone to UTC..."
 sudo timedatectl set-timezone UTC
