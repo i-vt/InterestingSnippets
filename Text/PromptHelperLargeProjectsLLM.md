@@ -20,13 +20,20 @@
 ## Deployment
 * Create deployment scripts, assume it will be deployed on debian 12 / 13. Docker is pre-installed by default. The user from which the installer script will be ran is from root.
 * Create a install.sh, uninstall.sh, .env.example (copied as .env on startup if there is not one present in the dir). Dockerize deployments. For install.sh --reset --yes should fully reset, delete docker volumes, delete all user data.
+* The data generated during the usage of the app including user data should be stored in ./data, separate the data of user-generated vs other.
 * Export all hardcoded variables to .env.
 * For web applications by default configure without HTTPS, however, allow for HTTPS with a domain if configured in .env.
 * Ensure it self-recovers after reboot. Log all errors.
 * The fixes deployed (ex.: missing packages) should be done by updating the deployment scripts (not a one-time fix). If an error has a missing package it should be updated in deploy to check if its installed, if not install it during the deployment scripts.
 
 ## Accounts
-* Admin account should be generated via a one-time admin registration link to create it should be reflected in the system logs. Enumerate all IPs and display links to register for each IP. 
+* Admin account should be generated via a one-time admin registration link to create it should be reflected in the system logs. Enumerate all panel's IPs and display links to register for each IP (all public and private). 
 * Other members can be registered via a link, link generated on admin panel and uses the public IP (if available) ready to copy/paste.
 * Admin should be able to disable a user, reset password (give user a password reset link), delete data.
 * Add telegram bot interface for users and admin.
+
+## UX/UI
+* The telegram bot should contain buttons for the built-in UX/UI, ensure the content does not overflow the button size. For any additional info put it separately and just add reference for the buttons clicked so that the buttons are not filled with text that gets cut off anyway.
+* Add tooltips and hints in all input fields - so a new user can get acquainted with the product quickly.
+* At the time of registration generate a user icon with a seed of UUID (one time randomly generated, not reused anywhere else in the panel - not saved either) https://api.dicebear.com/9.x/dylan/svg?seed=123456789 , save it on the server to avoid double-requests.
+* Apply principles of: material design formalized "containment hierarchy", gestalt principle of common region, containment (material design). Each card containment should have texture, click animation for buttons, swap animation for radio-button elements, and etc - not one element should be left as default CSS. 
