@@ -30,13 +30,13 @@
 * Admin account should be generated via a one-time admin registration link to create it should be reflected in the system logs. Enumerate all panel's IPs and display links to register for each IP (all public and private). 
 * Other members can be registered via a link, link generated on admin panel and uses the public IP (if available) ready to copy/paste.
 * Admin should be able to disable a user, reset password (give user a password reset link), delete data.
+* At the time of registration generate a user icon with a seed of UUID (one time randomly generated, not reused anywhere else in the panel - not saved either) https://api.dicebear.com/9.x/dylan/svg?seed=123456789 , save it on the server to avoid double-requests.
 
 ## UX/UI
 * Add tooltips and hints in all input fields - so a new user can get acquainted with the product quickly.
-* At the time of registration generate a user icon with a seed of UUID (one time randomly generated, not reused anywhere else in the panel - not saved either) https://api.dicebear.com/9.x/dylan/svg?seed=123456789 , save it on the server to avoid double-requests.
 * Apply principles of: material design formalized "containment hierarchy", gestalt principle of common region, containment (material design). Each card containment should have texture, click animation for buttons, swap animation for radio-button elements, and etc - not one element should be left as default CSS.
 * All "upload" fields should support drag and drop a file into the browser in addition regular "click to select a file".
-* Multi-line textboxes should be expandable when clicked the corner, giving the user more space to enter details.
+* Multi-line textboxes should be expandable when clicked the corner and drag, giving the user more space to enter details. User may click to "full screen" the textbox which will expand the box as a floating textbox occupying most of the screen. Add a button for user to click to easily copy to clipboard. These buttons should fit into the overall interface and layout nicely and not interfere with overall user experience when typing/editing/interacting with text.
 
 ## Telegram
 * The telegram bot should contain buttons for the built-in UX/UI, ensure the content does not overflow the button size. For any additional info put it separately and just add reference for the buttons clicked so that the buttons are not filled with text that gets cut off anyway.
