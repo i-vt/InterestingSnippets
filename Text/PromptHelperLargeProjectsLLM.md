@@ -25,6 +25,7 @@
 * For web applications by default configure without HTTPS, however, allow for HTTPS with a domain if configured in .env.
 * Ensure it self-recovers after reboot. Log all errors.
 * The fixes deployed (ex.: missing packages) should be done by updating the deployment scripts (not a one-time fix). If an error has a missing package it should be updated in deploy to check if its installed, if not install it during the deployment scripts.
+* Ensure all features can be intractable via an API interface, for an easier automation and agentic workflow implementation.
 
 ## Accounts
 * Admin account should be generated via a one-time admin registration link to create it should be reflected in the system logs. Enumerate all panel's IPs and display links to register for each IP (all public and private). 
