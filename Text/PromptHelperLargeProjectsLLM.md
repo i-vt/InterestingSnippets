@@ -61,7 +61,36 @@ Each entry should have the following:
 * Admin account should be generated via a one-time admin registration link to create it should be reflected in the system logs. Enumerate all panel's IPs and display links to register for each IP (all public and private). 
 * Other members can be registered via a link, link generated on admin panel and uses the public IP (if available) ready to copy/paste.
 * Admin should be able to disable a user, reset password (give user a password reset link), delete data.
-* At the time of registration generate a user icon with a seed of UUID (one time randomly generated, not reused anywhere else in the panel - not saved either) https://api.dicebear.com/9.x/dylan/svg?seed=123456789 , save it on the server to avoid double-requests.
+* At the time of registration generate a user icon with a seed of UUID (one time randomly generated, not reused anywhere else in the panel - not saved either) in the .env the default user profile generation via the URL https://api.dicebear.com/9.x/dylan/svg?seed=cd79ebfa-cca4-4def-bd03-7c65de2bef9b , save it on the server to avoid double-requests.
+* Not necessary to pick `dylan` option for avatar, if it suits better use any other from these for any elements that are procedurally generate: 
+```json
+{
+    "human": [
+        "micah", "lorelei", "lorelei-neutral", "avataaars", "avataaars-neutral",
+        "open-peeps", "personas", "notionists", "notionists-neutral",
+        "adventurer", "adventurer-neutral", "croodles", "croodles-neutral",
+        "big-smile", "big-ears", "big-ears-neutral", "miniavs", "thumbs",
+        "toon-head", "dylan", "pixel-art", "pixel-art-neutral", "cameo",
+        "clay", "gaze", "line-face", "moods", "initial-face",
+    ],
+    "bots": [
+        "bottts", "bottts-neutral", "pixelbot", "voxel-bot",
+    ],
+    "creatures": [
+        "critters", "sprouts",
+    ],
+    "emoji": [
+        "fun-emoji",
+    ],
+    "abstract": [
+        "identicon", "initials", "icons", "glyphs", "shapes", "shape-grid",
+        "rings", "marbles", "planets", "squircles", "blobs", "loops", "waves",
+        "stripes", "weave", "patchwork", "triangles", "stack", "slice",
+        "glass", "shadows", "disco", "cutouts", "constellation", "landscape",
+        "voxel-art",
+    ],
+}
+```
 * Every API endpoint must check authentication and authorization server-side, not just hide UI elements.
 * Log all admin actions (user created, disabled, deleted, invite generated, password reset) with who, what, and when.
 * Show system status in the admin panel: version, uptime, disk usage, backup status, error log tail.
