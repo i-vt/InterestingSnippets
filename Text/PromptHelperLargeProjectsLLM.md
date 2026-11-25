@@ -42,6 +42,11 @@ Each entry should have the following:
 * Specifies "lessons learned" including but not limited to user preference, errors encountered, and foreseeable future issues.
 * Where applicable include one or multiple of the above: code snippet or pseudo-code, error snippet, debug info, and etc.
 
+### API.md
+* Provide examples of usage.
+* Descripton of the API, where it is used (which file) and what function it has.
+* Provide parameters for the API with sample output.
+
 ## Deployment
 * Create deployment scripts, assume it will be deployed on debian 12 / 13. Docker is pre-installed by default. The user from which the installer script will be ran is from root.
 * Create a install.sh, uninstall.sh, .env.example (copied as .env on startup if there is not one present in the dir). Dockerize deployments. For install.sh --reset --yes should fully reset, delete docker volumes, delete all user data.
@@ -53,7 +58,7 @@ Each entry should have the following:
 * For web applications by default configure without HTTPS, however, allow for HTTPS with a domain if configured in .env.
 * Ensure it self-recovers after reboot. Log all errors.
 * The fixes deployed (ex.: missing packages) should be done by updating the deployment scripts (not a one-time fix). If an error has a missing package it should be updated in deploy to check if its installed, if not install it during the deployment scripts.
-* Ensure all features can be intractable via an API interface, for an easier automation and agentic workflow implementation. Version all API routes (/api/v1/...) and provide OpenAPI/Swagger documentation for automation.
+* Ensure all features can be intractable via an API interface, for an easier automation and agentic workflow implementation, provide OpenAPI/Swagger documentation for automation in API.md.
 * Add rate limiting to public endpoints (for example: login, registration, invite links, telegram webhook). Specify the thresholds of the limits inside of the .env.
 * All long-running operations must return a job/status pattern rather than blocking.
 
