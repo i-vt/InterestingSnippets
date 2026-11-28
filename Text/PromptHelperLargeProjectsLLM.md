@@ -6,7 +6,6 @@
 * Before delivering, re-read the full request and verify every point is addressed. State what was done and what was not (and why).
 
 ## Existing Project
-
 * Match the existing project structure, naming conventions, and patterns before introducing new ones.
 * DO NOT TOUCH UNRELATED FUNCTIONS AND FEATURES. DO NOT MODIFY ABBREVIATE REMOVE ADD OR APPEND CODE OR FEATURES THAT ARE NOT RELATED TO THIS REQUEST. MODIFY ONLY THE CODE THAT IS THE SUBJECT OF THE CHANGE DO NOT TOUCH ANY OTHER FUNCTIONS. You may suggest to the user to refactor the unrelated code, however, ask first.
 
@@ -48,8 +47,8 @@ Each entry should have the following:
 * Provide parameters for the API with sample output.
 
 ## Deployment
-* Create deployment scripts, assume it will be deployed on debian 12 / 13. Docker is pre-installed by default. The user from which the installer script will be ran is from root.
-* Create a install.sh, uninstall.sh, .env.example (copied as .env on startup if there is not one present in the dir). Dockerize deployments. For install.sh --reset --yes should fully reset, delete docker volumes, delete all user data.
+* Create deployment scripts, assume it will be deployed on debian 12 / 13. 
+* Create a install.sh, uninstall.sh, .env.example (copied as .env on startup if there is not one present in the dir). 
 * Never hardcode paths, ports, hostnames, or URLs. All of them come from .env with sensible defaults.
 * Validate all .env variables at startup. If a required variable is missing or invalid, fail fast with a clear message naming the variable.
 * Provide sensible defaults in .env.example so a fresh clone runs with minimal editing.
@@ -61,6 +60,10 @@ Each entry should have the following:
 * Ensure all features can be intractable via an API interface, for an easier automation and agentic workflow implementation, provide OpenAPI/Swagger documentation for automation in API.md.
 * Add rate limiting to public endpoints (for example: login, registration, invite links, telegram webhook). Specify the thresholds of the limits inside of the .env.
 * All long-running operations must return a job/status pattern rather than blocking.
+
+### Docker
+* Docker is pre-installed by default. The user from which the installer script will be ran is from root.
+* Dockerize deployments. For install.sh --reset --yes should fully reset, delete docker volumes, delete all user data.
 
 ## Accounts
 * Admin account should be generated via a one-time admin registration link to create it should be reflected in the system logs. Enumerate all panel's IPs and display links to register for each IP (all public and private). 
